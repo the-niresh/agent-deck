@@ -19,19 +19,23 @@ trigger side effects such as the expiry state transition.
 
 ## Open
 
-### Unvalidated OAuth `return_to` enables one-click account takeover (upstream #3429)
-**Severity:** Critical (when OAuth is enabled) · **Status:** OPEN — deferred 2026-07-25
+### ~~Unvalidated OAuth `return_to`~~ (upstream #3429) — FIXED 2026-07-26
+**Severity:** Critical (when OAuth is enabled) · **Status:** FIXED 2026-07-26
 
-**Current exposure: low.** This deployment authenticates via
-`SELF_HOST_LOCAL_AUTH_EMAIL` / `SELF_HOST_LOCAL_AUTH_PASSWORD`, so no OAuth provider is
-configured and the vulnerable path is not reachable.
+`is_allowed_return_to` (`crates/remote/src/auth/handoff.rs`) *looked* like an allowlist —
+it checked loopback and same-origin https — but then returned `true` unconditionally for
+everything else, with the comment "Rely on PKCE for security".
 
-**This becomes exploitable the moment a real OAuth provider (GitHub/Google/Entra) is
-enabled.** Fix it *before* turning one on, not after.
+**PKCE does not cover this.** PKCE binds an auth code to whoever *initiated* the flow. The
+attack is that the attacker initiates it (their own `app_challenge`, `return_to` pointing
+at their server) and induces a victim to complete it. The victim's `app_code` is delivered
+to the attacker, who already holds the matching verifier — a one-click account takeover.
 
-Expected shape of the fix: validate `return_to` against an allowlist of same-origin
-relative paths; reject absolute URLs and protocol-relative (`//host`) values. Start at
-`crates/remote/src/auth/` and `crates/remote/src/routes/oauth.rs`.
+Fix: the function now fails closed, allowing only http loopback (the desktop app's
+ephemeral port) and same-host https matching `SERVER_PUBLIC_BASE_URL`. Covered by
+`rejects_external_return_to`, which asserts rejection of external hosts, lookalike hosts
+(`agent.niresh.tech.evil.com`), subdomains, http downgrade of the real host, and
+non-http schemes.
 
 ### Other upstream security issues not yet triaged
 - Review remaining open issues on the archived upstream repo before widening access.
