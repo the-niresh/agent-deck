@@ -1,0 +1,26 @@
+[Unit]
+Description=agent-deck pull-based deploy (poll deploy branch, rebuild on change)
+Documentation=https://github.com/the-niresh/agent-deck/blob/main/docs/CONTINUOUS-DEPLOY.md
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/claude/projects/vibe-kanban
+ExecStart=/root/claude/projects/vibe-kanban/scripts/self-deploy.sh
+
+# A rebuild compiles the Rust remote server; give it room rather than killing
+# a half-finished image.
+TimeoutStartSec=45min
+
+Environment=DEPLOY_REMOTE=agent-deck
+Environment=DEPLOY_BRANCH=main
+Environment=DEPLOY_HEALTH_URL=http://127.0.0.1:13000/api/health
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=agent-deck-deploy
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+[Unit]
+Description=Poll for agent-deck deploys every 5 minutes
+Documentation=https://github.com/the-niresh/agent-deck/blob/main/docs/CONTINUOUS-DEPLOY.md
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+
+# Spread the poll so it does not hit GitHub on a predictable boundary.
+RandomizedDelaySec=45
+
+# If the machine was off when a run was due, catch up once on boot rather
+# than skipping the deploy entirely.
+Persistent=true
+
+Unit=agent-deck-deploy.service
+
+[Install]
+WantedBy=timers.target
