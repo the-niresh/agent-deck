@@ -488,12 +488,26 @@ fn is_valid_challenge(challenge: &str) -> bool {
         && challenge.chars().all(|ch| ch.is_ascii_hexdigit())
 }
 
+/// Decide whether an OAuth flow may redirect back to `url`.
+///
+/// This is an allowlist and it must fail closed. The completed flow appends a
+/// redeemable `app_code` to this URL, so anywhere it is allowed to point is
+/// somewhere a session can be stolen.
+///
+/// PKCE does **not** make an open redirect safe here. PKCE binds a code to
+/// whoever *initiated* the flow — but the attack is that the attacker initiates
+/// it (choosing their own challenge and `return_to`) and induces a victim to
+/// complete it. The victim's `app_code` is then delivered to the attacker, who
+/// already holds the matching verifier. That is a one-click account takeover,
+/// and it is why this previously returned `true` unconditionally.
 fn is_allowed_return_to(url: &Url, public_origin: &str) -> bool {
+    // Loopback over http: the local desktop app listens on an ephemeral port.
     if url.scheme() == "http" && matches!(url.host_str(), Some("127.0.0.1" | "localhost" | "[::1]"))
     {
         return true;
     }
 
+    // Same-origin https: the hosted web client.
     if url.scheme() == "https"
         && Url::parse(public_origin).ok().is_some_and(|public_url| {
             public_url.scheme() == "https"
@@ -504,9 +518,12 @@ fn is_allowed_return_to(url: &Url, public_origin: &str) -> bool {
         return true;
     }
 
-    // Log and allow web-hosted clients. Rely on PKCE for security.
-    tracing::info!(%url, "allowing external redirect URL");
-    true
+    tracing::warn!(
+        %url,
+        %public_origin,
+        "rejected OAuth return_to outside the allowlist"
+    );
+    false
 }
 
 fn hash_sha256_hex(input: &str) -> String {
@@ -603,5 +620,38 @@ mod tests {
         ));
         assert!(!is_valid_challenge("not-hex"));
         assert!(!is_valid_challenge(""));
+    }
+
+    fn allowed(u: &str) -> bool {
+        is_allowed_return_to(&Url::parse(u).unwrap(), "https://agent.niresh.tech")
+    }
+
+    #[test]
+    fn allows_same_origin_https_and_loopback() {
+        assert!(allowed("https://agent.niresh.tech/account"));
+        assert!(allowed("https://agent.niresh.tech/projects/x?y=1"));
+        // The local desktop app binds an ephemeral loopback port.
+        assert!(allowed("http://localhost:13333/callback"));
+        assert!(allowed("http://127.0.0.1:3001/cb"));
+        assert!(allowed("http://[::1]:8080/cb"));
+    }
+
+    #[test]
+    fn rejects_external_return_to() {
+        // The completed flow appends a redeemable app_code to return_to, so an
+        // external host here is a one-click account takeover (upstream #3429).
+        assert!(!allowed("https://evil.com/steal"));
+        assert!(!allowed("http://evil.com/steal"));
+        // Lookalike host that merely contains the real one.
+        assert!(!allowed("https://agent.niresh.tech.evil.com/steal"));
+        // Subdomain is a different host and is not the hosted client.
+        assert!(!allowed("https://evil.agent.niresh.tech/steal"));
+        // Downgrade to http on the real host.
+        assert!(!allowed("http://agent.niresh.tech/account"));
+        // Non-loopback http.
+        assert!(!allowed("http://192.168.1.5/cb"));
+        // Non-http schemes must never be redirect targets.
+        assert!(!allowed("javascript:alert(1)"));
+        assert!(!allowed("file:///etc/passwd"));
     }
 }
