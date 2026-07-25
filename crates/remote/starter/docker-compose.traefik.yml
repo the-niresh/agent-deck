@@ -1,0 +1,31 @@
+# Expose the remote server through an existing Traefik instance.
+#
+# Layered on top of the base compose via the Makefile's -f chain, so the base
+# file stays untouched. Only the AUTHENTICATED remote server is published —
+# never the local workspaces app, which has no authentication and executes
+# coding agents on the host. See docs/DEPLOYMENT.md.
+#
+# Required in .env.remote:
+#   PUBLIC_HOSTNAME=agent.example.com
+#   PUBLIC_BASE_URL=https://agent.example.com
+#   TRAEFIK_NETWORK=<the docker network your Traefik is attached to>
+#   TRAEFIK_CERTRESOLVER=<your ACME resolver name>
+#   TRAEFIK_ENTRYPOINT=<your TLS entrypoint name>
+
+services:
+  remote-server:
+    networks:
+      - default
+      - traefik
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:?set TRAEFIK_NETWORK in .env.remote}
+      traefik.http.routers.agentdeck.rule: Host(`${PUBLIC_HOSTNAME:?set PUBLIC_HOSTNAME in .env.remote}`)
+      traefik.http.routers.agentdeck.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.agentdeck.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      traefik.http.services.agentdeck.loadbalancer.server.port: "8081"
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:?set TRAEFIK_NETWORK in .env.remote}

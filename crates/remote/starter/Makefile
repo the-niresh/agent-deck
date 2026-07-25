@@ -18,11 +18,17 @@ VK_REPO_ROOT := $(abspath $(CURDIR)/../../..)
 COMPOSE_DIR := $(abspath $(CURDIR)/..)
 ENV_FILE := $(VK_REPO_ROOT)/.env.remote
 
+# Traefik exposure is opt-in: the overlay is layered on only when
+# PUBLIC_HOSTNAME is set in .env.remote. Without it the stack stays bound to
+# loopback exactly as before.
+TRAEFIK_OVERLAY := $(shell grep -qsE '^PUBLIC_HOSTNAME=.+' $(ENV_FILE) && printf '%s' "-f $(CURDIR)/docker-compose.traefik.yml")
+
 COMPOSE := docker compose \
   -f $(COMPOSE_DIR)/docker-compose.yml \
   -f $(CURDIR)/docker-compose.override.yml \
   -f $(CURDIR)/docker-compose.ports.yml \
   -f $(CURDIR)/docker-compose.no-ssh.yml \
+  $(TRAEFIK_OVERLAY) \
   --env-file $(ENV_FILE)
 
 .DEFAULT_GOAL := help
