@@ -809,10 +809,7 @@ impl GitCli {
             // The rebase succeeded but the fast-forward failed. Roll the task
             // branch back to its pre-rebase tip so the repository returns to
             // its pre-call state.
-            let _ = self.git(
-                task_repo_path,
-                ["reset", "--hard", &original_task_tip],
-            );
+            let _ = self.git(task_repo_path, ["reset", "--hard", &original_task_tip]);
             return Err(e);
         }
 
