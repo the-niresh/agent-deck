@@ -190,10 +190,18 @@ impl<'a> InvitationRepository<'a> {
         Ok(())
     }
 
+    /// Accept an invitation on behalf of `user_id`.
+    ///
+    /// `user_email` is required and must match the address the invitation was
+    /// issued to. The token alone is NOT sufficient authorization: invitation
+    /// links travel through email and get forwarded, so without this binding
+    /// anyone holding the token could join the organization with the invited
+    /// role — including Admin.
     pub async fn accept_invitation(
         &self,
         token: &str,
         user_id: Uuid,
+        user_email: &str,
     ) -> Result<(Organization, MemberRole), IdentityError> {
         let mut tx = super::begin_tx(self.pool).await?;
 
@@ -222,6 +230,18 @@ impl<'a> InvitationRepository<'a> {
         .ok_or_else(|| {
             IdentityError::InvitationError("Invitation not found or already used".to_string())
         })?;
+
+        // Bind the invitation to the identity it was issued to. Checked before
+        // any other validation so a mismatched caller cannot cause state
+        // changes (such as the expiry transition below).
+        if !invitation.email.eq_ignore_ascii_case(user_email.trim()) {
+            tx.rollback().await?;
+            return Err(IdentityError::InvitationError(
+                "This invitation was issued to a different email address. \
+                 Sign in as the invited user to accept it."
+                    .to_string(),
+            ));
+        }
 
         if is_personal_org(&mut *tx, invitation.organization_id).await? {
             tx.rollback().await?;
