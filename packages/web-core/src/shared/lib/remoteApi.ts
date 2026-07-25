@@ -197,10 +197,19 @@ export async function computeFileHash(file: File): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// Utility: Upload to Azure Blob Storage with progress
+// Utility: Upload to object storage (S3-compatible) with progress
 // ---------------------------------------------------------------------------
 
-export function uploadToAzure(
+/**
+ * PUT a file to a presigned object-storage URL.
+ *
+ * Deliberately sends no headers. The server presigns without signing
+ * `Content-Type` (the MIME type is unknown at that point), and SigV4 enforces
+ * every header it signs byte-for-byte — sending one it did not sign risks a
+ * 403. The stored MIME type is recorded server-side and applied on read via
+ * `response-content-type`.
+ */
+export function uploadToStorage(
   uploadUrl: string,
   file: File,
   onProgress?: (pct: number) => void
@@ -208,8 +217,6 @@ export function uploadToAzure(
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', uploadUrl, true);
-    xhr.setRequestHeader('x-ms-blob-type', 'BlockBlob');
-    xhr.setRequestHeader('Content-Type', file.type);
 
     if (onProgress) {
       xhr.upload.addEventListener('progress', (e) => {
@@ -220,19 +227,20 @@ export function uploadToAzure(
     }
 
     xhr.onload = () => {
-      if (xhr.status === 201) {
+      // S3/R2 answer 200 on a successful PUT (Azure Blob used to answer 201).
+      if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
       } else {
         reject(
           new Error(
-            `Azure upload failed with status ${xhr.status}: ${xhr.statusText}`
+            `Upload failed with status ${xhr.status}: ${xhr.statusText}`
           )
         );
       }
     };
 
     xhr.onerror = () => {
-      reject(new Error('Azure upload failed: network error'));
+      reject(new Error('Upload failed: network error'));
     };
 
     xhr.send(file);

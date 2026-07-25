@@ -12,7 +12,6 @@ use crate::{
         GitHubOAuthProvider, GoogleOAuthProvider, JwtService, OAuthHandoffService,
         OAuthTokenValidator, ProviderRegistry,
     },
-    azure_blob::AzureBlobService,
     billing::BillingService,
     config::RemoteServerConfig,
     db, digest,
@@ -129,19 +128,10 @@ impl Server {
 
         let r2 = config.r2.as_ref().map(R2Service::new);
         if r2.is_some() {
-            tracing::info!("R2 storage service initialized");
+            tracing::info!("R2 storage service initialized (reviews and attachments)");
         } else {
             tracing::warn!(
-                "R2 storage service not configured. Set R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_REVIEW_ENDPOINT, and R2_REVIEW_BUCKET to enable."
-            );
-        }
-
-        let azure_blob = config.azure_blob.as_ref().map(AzureBlobService::new);
-        if azure_blob.is_some() {
-            tracing::info!("Azure Blob storage service initialized");
-        } else {
-            tracing::info!(
-                "Azure Blob storage not configured. Set AZURE_STORAGE_ACCOUNT_NAME and AZURE_STORAGE_ACCOUNT_KEY to enable issue attachments."
+                "R2 storage service not configured. Set R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_REVIEW_ENDPOINT, and R2_REVIEW_BUCKET to enable reviews and issue attachments."
             );
         }
 
@@ -193,8 +183,8 @@ impl Server {
             }
         };
 
-        if let Some(ref azure_blob_service) = azure_blob {
-            spawn_cleanup_task(pool.clone(), azure_blob_service.clone());
+        if let Some(ref storage) = r2 {
+            spawn_cleanup_task(pool.clone(), storage.clone());
         }
 
         let digest_enabled = std::env::var("DIGEST_ENABLED")
@@ -223,7 +213,6 @@ impl Server {
             server_public_base_url,
             http_client,
             r2,
-            azure_blob,
             github_app,
             billing,
             analytics,

@@ -19,36 +19,6 @@ services:
     ports:
       - "5433:5432"
 
-  azurite:
-    profiles: ["attachments"]
-    image: mcr.microsoft.com/azure-storage/azurite:latest
-    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --loose --skipApiVersionCheck"
-    ports:
-      - "10000:10000"
-    volumes:
-      - azurite-data:/data
-    healthcheck:
-      test: nc 127.0.0.1 10000 -z
-      interval: 1s
-      retries: 30
-
-  azurite-init:
-    profiles: ["attachments"]
-    image: mcr.microsoft.com/azure-cli:latest
-    depends_on:
-      azurite:
-        condition: service_healthy
-    environment:
-      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        set -e
-        az storage container create --name issue-attachments 2>/dev/null || true
-        az storage cors add --services b --methods GET PUT POST DELETE OPTIONS --origins '*' --allowed-headers '*' --exposed-headers '*' --max-age 3600
-        echo "Azurite CORS configured"
-
   electric:
     image: electricsql/electric:1.4.13
     working_dir: /app
@@ -87,9 +57,6 @@ services:
     depends_on:
       remote-db:
         condition: service_healthy
-      azurite-init:
-        condition: service_completed_successfully
-        required: false
     environment:
       RUST_LOG: info,remote=info
 
@@ -146,11 +113,6 @@ services:
 
       # Attachments (optional)
       # Only set these when enabling the attachments profile or using external blob storage.
-      AZURE_STORAGE_ACCOUNT_NAME:
-      AZURE_STORAGE_ACCOUNT_KEY:
-      AZURE_STORAGE_CONTAINER_NAME:
-      AZURE_STORAGE_ENDPOINT_URL:
-      AZURE_STORAGE_PUBLIC_ENDPOINT_URL:
 
     ports:
       - "${REMOTE_SERVER_PORTS:-127.0.0.1:3000:8081}"
@@ -188,4 +150,3 @@ services:
 volumes:
   remote-db-data:
   electric-data:
-  azurite-data:

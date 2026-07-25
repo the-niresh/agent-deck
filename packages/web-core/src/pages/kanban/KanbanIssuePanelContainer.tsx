@@ -42,7 +42,7 @@ import {
   selectIsCreateDraftDirty,
 } from './kanban-issue-panel-state';
 import { useUiPreferencesStore } from '@/shared/stores/useUiPreferencesStore';
-import { useAzureAttachments } from '@/shared/hooks/useAzureAttachments';
+import { useAttachments } from '@/shared/hooks/useAttachments';
 import {
   commitIssueAttachments,
   deleteAttachment,
@@ -507,7 +507,7 @@ export function KanbanIssuePanelContainer({
     ]
   );
 
-  // Azure attachment upload hook
+  // Attachment upload hook
   const {
     uploadFiles,
     getAttachmentIds,
@@ -517,7 +517,7 @@ export function KanbanIssuePanelContainer({
     uploadError,
     clearUploadError,
     localAttachments,
-  } = useAzureAttachments({
+  } = useAttachments({
     projectId,
     issueId: kanbanCreateMode
       ? undefined

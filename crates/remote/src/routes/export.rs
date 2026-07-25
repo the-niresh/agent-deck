@@ -319,7 +319,7 @@ async fn export_data(
             .map_err(|e| ErrorResponse::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
         // Download and include actual files
-        if let Some(azure_blob) = state.azure_blob() {
+        if let Some(storage) = state.r2() {
             for att in &attachments {
                 let issue_sid = att
                     .issue_id
@@ -328,7 +328,7 @@ async fn export_data(
                     .unwrap_or("unattached");
                 let zip_path = format!("attachments/{}/{}", issue_sid, att.original_name);
 
-                match azure_blob.download_blob(&att.blob_path).await {
+                match storage.get_object_bytes(&att.blob_path).await {
                     Ok(data) => {
                         // Store attachments without compression (they're usually already compressed images)
                         let store_options = SimpleFileOptions::default()

@@ -15,7 +15,7 @@ import { useDebouncedCallback } from '@/shared/hooks/useDebouncedCallback';
 import { useOrgContext } from '@/shared/hooks/useOrgContext';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';
 import { useCurrentUser } from '@/shared/hooks/auth/useCurrentUser';
-import { useAzureAttachments } from '@/shared/hooks/useAzureAttachments';
+import { useAttachments } from '@/shared/hooks/useAttachments';
 import {
   commitCommentAttachments,
   deleteAttachment,
@@ -175,7 +175,7 @@ function IssueCommentsSectionContent() {
     uploadError,
     clearUploadError,
     localAttachments,
-  } = useAzureAttachments({
+  } = useAttachments({
     projectId,
     onMarkdownInsert: handleCommentMarkdownInsert,
     onAttachmentSourceReplace: handleCommentSourceReplace,

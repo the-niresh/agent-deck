@@ -6,7 +6,7 @@ import {
   confirmAttachmentUpload,
   deleteAttachment,
   initAttachmentUpload,
-  uploadToAzure,
+  uploadToStorage,
 } from '@/shared/lib/remoteApi';
 import { buildAttachmentMarkdown } from '@/shared/lib/workspaceAttachments';
 
@@ -26,7 +26,7 @@ export interface CompletedAttachment {
   blob_id: string;
 }
 
-interface UseAzureAttachmentsOptions {
+interface UseAttachmentsOptions {
   projectId: string;
   issueId?: string;
   commentId?: string;
@@ -46,7 +46,7 @@ interface UseAzureAttachmentsOptions {
   onError?: (message: string) => void;
 }
 
-interface UseAzureAttachmentsReturn {
+interface UseAttachmentsReturn {
   uploadFiles: (files: File[]) => Promise<void>;
   pendingAttachments: PendingAttachment[];
   completedAttachments: CompletedAttachment[];
@@ -98,7 +98,7 @@ function inferFormat(file: File): string {
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useAzureAttachments({
+export function useAttachments({
   projectId,
   issueId,
   commentId,
@@ -106,7 +106,7 @@ export function useAzureAttachments({
   onAttachmentSourceReplace,
   onAttachmentSourceRemove,
   onError,
-}: UseAzureAttachmentsOptions): UseAzureAttachmentsReturn {
+}: UseAttachmentsOptions): UseAttachmentsReturn {
   const { t } = useTranslation('common');
   const [pendingAttachments, setPendingAttachments] = useState<
     PendingAttachment[]
@@ -256,7 +256,7 @@ export function useAzureAttachments({
           });
 
           if (!initResult.skip_upload) {
-            await uploadToAzure(initResult.upload_url, file, (pct) => {
+            await uploadToStorage(initResult.upload_url, file, (pct) => {
               setPendingAttachments((prev) =>
                 prev.map((p) => (p.file === file ? { ...p, progress: pct } : p))
               );
