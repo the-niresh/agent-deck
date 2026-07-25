@@ -25,6 +25,34 @@ services:
       traefik.http.routers.agentdeck.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
       traefik.http.services.agentdeck.loadbalancer.server.port: "8081"
 
+      # This host serves a password login form, so downgrade protection matters:
+      # without HSTS every first visit is a plaintext HTTP round-trip that can be
+      # intercepted before the redirect fires.
+      #
+      # `preload` is deliberately NOT set — submitting to the browser preload list
+      # is effectively irreversible and would apply for months.
+      traefik.http.routers.agentdeck.middlewares: agentdeck-security
+      traefik.http.middlewares.agentdeck-security.headers.stsSeconds: "31536000"
+      traefik.http.middlewares.agentdeck-security.headers.stsIncludeSubdomains: "true"
+      traefik.http.middlewares.agentdeck-security.headers.contentTypeNosniff: "true"
+      traefik.http.middlewares.agentdeck-security.headers.referrerPolicy: strict-origin-when-cross-origin
+
+  # The relay lets the remote UI reach workspaces running on your local machine.
+  # It needs its own hostname: its routes live under /v1/relay/* and the remote
+  # server already owns /v1, so a shared host would collide.
+  relay-server:
+    networks:
+      - default
+      - traefik
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:?set TRAEFIK_NETWORK in .env.remote}
+      traefik.http.routers.agentdeckrelay.rule: Host(`${RELAY_HOSTNAME:?set RELAY_HOSTNAME in .env.remote}`)
+      traefik.http.routers.agentdeckrelay.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.agentdeckrelay.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      traefik.http.services.agentdeckrelay.loadbalancer.server.port: "8082"
+      traefik.http.routers.agentdeckrelay.middlewares: agentdeck-security
+
 networks:
   traefik:
     external: true

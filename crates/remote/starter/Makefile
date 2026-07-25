@@ -23,12 +23,17 @@ ENV_FILE := $(VK_REPO_ROOT)/.env.remote
 # loopback exactly as before.
 TRAEFIK_OVERLAY := $(shell grep -qsE '^PUBLIC_HOSTNAME=.+' $(ENV_FILE) && printf '%s' "-f $(CURDIR)/docker-compose.traefik.yml")
 
+# Setting RELAY_HOSTNAME turns on the relay profile, which is what lets the
+# remote UI reach workspaces on your local machine.
+RELAY_PROFILE := $(shell grep -qsE '^RELAY_HOSTNAME=.+' $(ENV_FILE) && printf '%s' "--profile relay")
+
 COMPOSE := docker compose \
   -f $(COMPOSE_DIR)/docker-compose.yml \
   -f $(CURDIR)/docker-compose.override.yml \
   -f $(CURDIR)/docker-compose.ports.yml \
   -f $(CURDIR)/docker-compose.no-ssh.yml \
   $(TRAEFIK_OVERLAY) \
+  $(RELAY_PROFILE) \
   --env-file $(ENV_FILE)
 
 .DEFAULT_GOAL := help
