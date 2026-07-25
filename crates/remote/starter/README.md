@@ -93,8 +93,10 @@ re-provisioning.
 - **No relay / tunnel.** The frontend app on `FRONTEND_PORT` talks to the
   backend on `REMOTE_SERVER_PORT` directly. Other machines on your network
   cannot reach your instance.
-- **Attachments disabled.** The Azurite profile is not enabled here. Issue
-  attachments won't work until you enable that profile and add the env vars.
+- **Attachments need object storage.** Issue attachments share the
+  S3-compatible bucket used for review artifacts. Set the `R2_*` variables in
+  `.env.remote` and add a bucket CORS rule allowing `GET`/`PUT` from your app
+  origin; the browser uploads directly to the bucket.
 
 ## Troubleshooting
 

@@ -73,6 +73,59 @@ curl -sI https://agent.niresh.tech | head -1        # expect 200
 docker logs traefik 2>&1 | grep -i acme | tail      # cert issuance
 ```
 
+## Object storage (review artifacts + issue attachments)
+
+Both features share one S3-compatible bucket. Cloudflare R2 is the reference
+setup; any S3-compatible provider works.
+
+```bash
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_REVIEW_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com   # account-level, no bucket
+R2_REVIEW_BUCKET=agent-deck
+```
+
+Keys are separated by prefix within the bucket: `reviews/`, `attachments/`,
+`thumbnails/`.
+
+> The env names still say `REVIEW` for backwards compatibility. They configure
+> attachments too.
+
+If `R2_ACCESS_KEY_ID` is set but any other `R2_*` var is missing, the server
+**fails on startup** rather than silently disabling storage — set all four together.
+
+### Bucket CORS is required
+
+The browser uploads **directly** to the bucket, so it must accept cross-origin
+requests from your app. Without this, uploads fail with an opaque CORS error
+that **only reproduces in a real browser** — curl will not catch it.
+
+R2 → your bucket → Settings → CORS Policy:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://agent.niresh.tech"],
+    "AllowedMethods": ["GET", "PUT"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+### How uploads are signed
+
+Worth knowing before changing this code. The presigned `PUT` deliberately does
+**not** sign `Content-Type`: attachments are presigned before the MIME type is
+known (`InitUploadRequest` carries none), and SigV4 enforces any header it signs
+byte-for-byte — a mismatch is a 403. The browser therefore sends **no headers**.
+The MIME type is stored in `blobs.mime_type` and applied on read via
+`response-content-type`, so images still render inline.
+
+Note also that S3/R2 answer **200** on a successful PUT, where Azure Blob
+answered 201.
+
 ## Hardening before you invite anyone
 
 - **Rotate the bootstrap admin password.** `setup.sh` generated it and wrote it to

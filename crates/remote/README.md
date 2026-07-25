@@ -81,19 +81,11 @@ cd crates/remote
 docker compose --env-file .env.remote --profile relay up --build
 ```
 
-Enable local attachment storage with Azurite:
-
-```bash
-cd crates/remote
-docker compose --env-file .env.remote --profile attachments up --build
-```
-
-Enable both:
-
-```bash
-cd crates/remote
-docker compose --env-file .env.remote --profile relay --profile attachments up --build
-```
+Issue attachments need no extra profile: they use the same S3-compatible
+object storage as code-review artifacts. Set `R2_ACCESS_KEY_ID`,
+`R2_SECRET_ACCESS_KEY`, `R2_REVIEW_ENDPOINT` and `R2_REVIEW_BUCKET` in
+`.env.remote`, and add a CORS rule on the bucket allowing `GET` and `PUT`
+from your app origin — the browser uploads directly to the bucket.
 
 Additional endpoint with the `relay` profile:
 
