@@ -15,10 +15,22 @@
   <a href="https://deepwiki.com/BloopAI/vibe-kanban"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
-<h1 align="center">
-  <strong>Vibe Kanban is sunsetting.</strong>
-  <a href="https://www.vibekanban.com/blog/shutdown">Read the announcement.</a>
-</h1>
+> **agent-deck** — a self-hosted fork of [BloopAI/vibe-kanban](https://github.com/BloopAI/vibe-kanban),
+> maintained for private use. Upstream was sunset with its last commit on 2026-04-24; its
+> hosted cloud is gone and `vibekanban.com` links in this README may be dead.
+>
+> **What this fork changes:**
+> - **Kanban board restored.** Upstream `#3387` replaced the project board with an
+>   export-only sunset page. That commit is reverted here, unconditionally — not behind a
+>   build flag, so an unset env var can never silently gut the UI again.
+> - **Cloud shutdown banners removed** from both the local and remote frontends.
+> - **17 community PRs merged** that upstream never landed — MCP orchestration tooling,
+>   memory and workflow fixes, additional agent models. See `git log`.
+> - **Runs entirely on your own infrastructure.** No upstream cloud, no accounts.
+>   Analytics are compile-time gated on `POSTHOG_API_KEY`, which is absent when building
+>   from source, so a self-built binary reports nothing.
+>
+> See [Self-hosting](#self-hosting) below to bring up the full stack.
 
 ![](packages/public/vibe-kanban-screenshot-overview.png)
 
@@ -46,19 +58,67 @@ npx vibe-kanban
 
 ## Installation
 
-Make sure you have authenticated with your favourite coding agent. A full list of supported coding agents can be found in the [docs](https://vibekanban.com/docs/supported-coding-agents). Then in your terminal run:
+> `npx vibe-kanban` installs the **published upstream package**, which is pinned at the
+> sunset release and shows the export-only page. Build from this checkout instead.
+
+Authenticate your coding agent CLI first (`claude`, `codex`, `gemini`, …), then:
 
 ```bash
-npx vibe-kanban
+pnpm i
+pnpm run dev          # frontend + backend, ports auto-assigned
 ```
 
-## Documentation
+### Build prerequisites
 
-Head to the [website](https://vibekanban.com/docs) for the latest documentation and user guides.
+- **Rust** — the toolchain is pinned by `rust-toolchain.toml` (`nightly-2025-12-04`);
+  `rustup` installs it automatically on first build.
+- **`LIBCLANG_PATH`** — `libsqlite3-sys` runs `bindgen`, which needs clang's builtin
+  headers. If the build fails with `'stdarg.h' file not found`, point it at the LLVM
+  install whose resource dir actually exists:
+  ```bash
+  export LIBCLANG_PATH=/usr/lib/llvm-18/lib
+  ```
+- **Desktop app is optional.** `crates/tauri-app` needs GTK system libraries. To build
+  and test only the web stack, exclude it:
+  ```bash
+  cargo test --workspace --exclude vibe-kanban-tauri
+  ```
 
-## Self-Hosting
+## Architecture: two halves, different requirements
 
-Want to host your own Vibe Kanban Cloud instance? See our [self-hosting guide](https://vibekanban.com/docs/self-hosting/deploy-docker).
+Worth understanding before self-hosting, because they have very different needs:
+
+| | Backing store | Needs sign-in? |
+|---|---|---|
+| **Workspaces** — agent execution, branches, terminals, dev servers, diff review | local SQLite | No |
+| **Projects / kanban issues** — the board | Postgres + ElectricSQL via `crates/remote` | Yes |
+
+Workspaces run standalone with no extra infrastructure. **The kanban board reads through
+ElectricSQL shapes**, so it needs the remote stack below — without it the board renders
+empty.
+
+## Self-hosting
+
+`crates/remote/starter/` brings up the full stack (Postgres with logical replication,
+ElectricSQL, and the remote server) and points this checkout's client at it:
+
+```bash
+cd crates/remote/starter
+./setup.sh              # generates .env.remote (gitignored: JWT + admin secrets)
+make start              # docker up, then launches THIS checkout's frontend
+```
+
+Auth uses `SELF_HOST_LOCAL_AUTH_EMAIL` / `SELF_HOST_LOCAL_AUTH_PASSWORD`, so **no OAuth
+provider is required**. Credentials are printed by `setup.sh` and stored in
+`.env.remote`. Other targets: `make logs`, `make status`, `make backup`, `make stop`.
+
+## A note on Claude Code billing
+
+The Claude executor invokes `claude -p` (headless mode) — see
+`crates/executors/src/executors/claude.rs`. Since 2026-06-15, `claude -p` draws from a
+**separate credit pool** rather than a Pro/Max subscription, so driving many agents
+through this tool bills differently than using Claude Code interactively. Budget
+accordingly, or use one of the other supported executors.
 
 ## Support
 
