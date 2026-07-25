@@ -95,3 +95,6 @@ vibe-kanban-cloud/
 *.ts.net.key
 Caddyfile
 Caddyfile.dev
+
+# Local scratch repos created by workspaces in the repo root
+/luluuuu/
