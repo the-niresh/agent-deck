@@ -139,6 +139,30 @@ impl<'a> InvitationRepository<'a> {
         Ok(invitations)
     }
 
+    /// Whether `email` has an invitation that is still pending and unexpired.
+    ///
+    /// Used to admit invited people through OAuth signup without adding every
+    /// one of them to a static allowlist.
+    pub async fn has_pending_invitation(&self, email: &str) -> Result<bool, IdentityError> {
+        let normalized = email.trim().to_ascii_lowercase();
+        let exists = sqlx::query_scalar!(
+            r#"
+            SELECT EXISTS (
+                SELECT 1
+                FROM organization_invitations
+                WHERE lower(email) = $1
+                  AND status = 'pending'
+                  AND expires_at > now()
+            ) AS "exists!"
+            "#,
+            normalized
+        )
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(exists)
+    }
+
     pub async fn get_invitation_by_token(&self, token: &str) -> Result<Invitation, IdentityError> {
         sqlx::query_as!(
             Invitation,

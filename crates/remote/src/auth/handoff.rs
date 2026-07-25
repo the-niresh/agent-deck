@@ -17,10 +17,12 @@ use super::{
     provider::{AuthorizationGrant, AuthorizationProvider, ProviderUser},
 };
 use crate::{
+    config::SignupPolicy,
     configure_user_scope,
     db::{
         auth::{AuthSessionError, AuthSessionRepository, MAX_SESSION_INACTIVITY_DURATION},
         identity_errors::IdentityError,
+        invitations::InvitationRepository,
         oauth::{
             AuthorizationStatus, CreateOAuthHandoff, OAuthHandoff, OAuthHandoffError,
             OAuthHandoffRepository,
@@ -45,6 +47,8 @@ pub enum HandoffError {
     InvalidReturnUrl(String),
     #[error("invalid app verifier challenge")]
     InvalidChallenge,
+    #[error("this account is not permitted to sign up")]
+    SignupNotAllowed,
     #[error("oauth handoff not found")]
     NotFound,
     #[error("oauth handoff expired")]
@@ -103,6 +107,7 @@ pub struct OAuthHandoffService {
     providers: Arc<ProviderRegistry>,
     jwt: Arc<JwtService>,
     public_origin: String,
+    signup_policy: SignupPolicy,
 }
 
 impl OAuthHandoffService {
@@ -111,6 +116,7 @@ impl OAuthHandoffService {
         providers: Arc<ProviderRegistry>,
         jwt: Arc<JwtService>,
         public_origin: String,
+        signup_policy: SignupPolicy,
     ) -> Self {
         let trimmed_origin = public_origin.trim_end_matches('/').to_string();
         Self {
@@ -118,7 +124,26 @@ impl OAuthHandoffService {
             providers,
             jwt,
             public_origin: trimmed_origin,
+            signup_policy,
         }
+    }
+
+    /// Decide whether a first-time OAuth user may create an account.
+    ///
+    /// Returning users are admitted by the caller before this runs, so editing
+    /// the allowlist cannot lock out an existing account.
+    async fn may_sign_up(&self, email: &str) -> Result<bool, HandoffError> {
+        if self.signup_policy.allows(email) {
+            return Ok(true);
+        }
+
+        // An outstanding invitation is itself an admission decision, so invited
+        // people join without also being added to a static list.
+        let invited = InvitationRepository::new(&self.pool)
+            .has_pending_invitation(email)
+            .await?;
+
+        Ok(invited)
     }
 
     pub fn providers(&self) -> Arc<ProviderRegistry> {
@@ -439,8 +464,18 @@ impl OAuthHandoffService {
             .await?;
 
         let user_id = match existing_account {
+            // Already admitted previously — the policy gates signup, not login.
             Some(account) => account.user_id,
-            None => Uuid::new_v4(),
+            None => {
+                if !self.may_sign_up(&email).await? {
+                    tracing::warn!(
+                        provider = provider.name(),
+                        "rejected OAuth signup for non-allowlisted, uninvited account"
+                    );
+                    return Err(HandoffError::SignupNotAllowed);
+                }
+                Uuid::new_v4()
+            }
         };
 
         let (first_name, last_name) = split_name(profile.name.as_deref());

@@ -78,11 +78,21 @@ impl Server {
 
         let registry = Arc::new(registry);
 
+        let signup_policy = auth_config.signup_policy().clone();
+        if signup_policy.is_unconfigured() {
+            tracing::warn!(
+                "No AUTH_ALLOWED_EMAILS or AUTH_ALLOWED_DOMAINS set — OAuth signup is \
+                 restricted to people holding a pending invitation. Set one of those to \
+                 admit accounts directly."
+            );
+        }
+
         let handoff_service = Arc::new(OAuthHandoffService::new(
             pool.clone(),
             registry.clone(),
             jwt.clone(),
             auth_config.public_base_url().to_string(),
+            signup_policy,
         ));
 
         let oauth_token_validator = Arc::new(OAuthTokenValidator::new(

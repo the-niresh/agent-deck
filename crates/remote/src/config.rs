@@ -287,6 +287,60 @@ pub struct AuthConfig {
     local: Option<LocalAuthConfig>,
     jwt_secret: SecretString,
     public_base_url: String,
+    signup_policy: SignupPolicy,
+}
+
+/// Who is allowed to create an account through an OAuth provider.
+///
+/// Without this the OAuth callback creates a user for anyone who completes the
+/// flow, which on a public host is open registration to the whole internet.
+/// Existing accounts are unaffected — this gates signup, not login, so editing
+/// the lists can never lock out someone already admitted.
+#[derive(Debug, Clone, Default)]
+pub struct SignupPolicy {
+    allowed_emails: Vec<String>,
+    allowed_domains: Vec<String>,
+}
+
+impl SignupPolicy {
+    fn from_env() -> Self {
+        Self {
+            allowed_emails: parse_csv_lowercase("AUTH_ALLOWED_EMAILS"),
+            allowed_domains: parse_csv_lowercase("AUTH_ALLOWED_DOMAINS")
+                .into_iter()
+                .map(|d| d.trim_start_matches('@').to_string())
+                .collect(),
+        }
+    }
+
+    /// True when no lists are configured at all.
+    ///
+    /// Callers must treat this as "reject every new signup" rather than
+    /// "allow everything": an unconfigured deployment should not silently be
+    /// open to the internet.
+    pub fn is_unconfigured(&self) -> bool {
+        self.allowed_emails.is_empty() && self.allowed_domains.is_empty()
+    }
+
+    pub fn allows(&self, email: &str) -> bool {
+        let email = email.trim().to_ascii_lowercase();
+        if self.allowed_emails.iter().any(|e| e == &email) {
+            return true;
+        }
+        match email.rsplit_once('@') {
+            Some((_, domain)) => self.allowed_domains.iter().any(|d| d == domain),
+            None => false,
+        }
+    }
+}
+
+fn parse_csv_lowercase(var: &str) -> Vec<String> {
+    env::var(var)
+        .unwrap_or_default()
+        .split(',')
+        .map(|v| v.trim().to_ascii_lowercase())
+        .filter(|v| !v.is_empty())
+        .collect()
 }
 
 impl AuthConfig {
@@ -335,6 +389,7 @@ impl AuthConfig {
             local,
             jwt_secret,
             public_base_url,
+            signup_policy: SignupPolicy::from_env(),
         })
     }
 
@@ -357,6 +412,10 @@ impl AuthConfig {
     pub fn public_base_url(&self) -> &str {
         &self.public_base_url
     }
+
+    pub fn signup_policy(&self) -> &SignupPolicy {
+        &self.signup_policy
+    }
 }
 
 fn validate_jwt_secret(secret: &str) -> Result<(), ConfigError> {
@@ -369,4 +428,42 @@ fn validate_jwt_secret(secret: &str) -> Result<(), ConfigError> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod signup_policy_tests {
+    use super::SignupPolicy;
+
+    fn policy(emails: &[&str], domains: &[&str]) -> SignupPolicy {
+        SignupPolicy {
+            allowed_emails: emails.iter().map(|e| e.to_string()).collect(),
+            allowed_domains: domains.iter().map(|d| d.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn unconfigured_policy_allows_nobody() {
+        let p = policy(&[], &[]);
+        assert!(p.is_unconfigured());
+        assert!(!p.allows("anyone@example.com"));
+    }
+
+    #[test]
+    fn matches_exact_email_case_insensitively() {
+        let p = policy(&["nireshine@gmail.com"], &[]);
+        assert!(p.allows("nireshine@gmail.com"));
+        assert!(p.allows("  NireshIne@Gmail.com  "));
+        assert!(!p.allows("someone@gmail.com"));
+    }
+
+    #[test]
+    fn matches_domain_but_not_lookalikes() {
+        let p = policy(&[], &["niresh.tech"]);
+        assert!(p.allows("me@niresh.tech"));
+        assert!(p.allows("ME@NIRESH.TECH"));
+        // Must not match a domain that merely ends with the allowed one.
+        assert!(!p.allows("attacker@evilniresh.tech"));
+        assert!(!p.allows("attacker@niresh.tech.evil.com"));
+        assert!(!p.allows("not-an-email"));
+    }
 }
