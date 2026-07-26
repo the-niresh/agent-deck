@@ -24,3 +24,7 @@ base64 = "0.22"
 uuid = { version = "1.0", features = ["serde", "v4"] }
 rand = "0.8"
 thiserror = { workspace = true }
+rustls = { version = "0.23", features = ["aws-lc-rs"] }
+
+[dev-dependencies]
+tracing-subscriber = { workspace = true }

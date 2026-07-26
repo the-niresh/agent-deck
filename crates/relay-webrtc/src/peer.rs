@@ -41,14 +41,11 @@ pub struct PeerConfig {
     pub shutdown: CancellationToken,
 }
 
-/// Accept an SDP offer and return the answer SDP along with the peer connection.
+/// Create a peer connection configured for the relay's ICE setup.
 ///
-/// Creates a new RTCPeerConnection with a STUN server, accepts the offer,
-/// waits for ICE gathering to complete, and returns the answer with
-/// candidates embedded in the SDP.
-pub async fn accept_offer(
-    offer_sdp: &str,
-) -> Result<(String, Arc<RTCPeerConnection>), WebRtcError> {
+/// The returned connection has no description and no handlers yet. Register
+/// handlers with [`attach_handlers`] *before* calling [`accept_offer`].
+pub async fn new_peer_connection() -> Result<Arc<RTCPeerConnection>, WebRtcError> {
     let api = crate::build_api();
 
     let config = RTCConfiguration {
@@ -59,8 +56,20 @@ pub async fn accept_offer(
         ..Default::default()
     };
 
-    let peer_connection = Arc::new(api.new_peer_connection(config).await?);
+    Ok(Arc::new(api.new_peer_connection(config).await?))
+}
 
+/// Accept an SDP offer on a peer connection and return the answer SDP.
+///
+/// Waits for ICE gathering to complete so candidates are embedded in the SDP.
+///
+/// The connection must already have its handlers attached — applying the
+/// remote description starts ICE, and from that moment the data channel can
+/// arrive at any time.
+pub async fn accept_offer(
+    peer_connection: &Arc<RTCPeerConnection>,
+    offer_sdp: &str,
+) -> Result<String, WebRtcError> {
     // Wait for ICE gathering to complete before returning the answer so
     // that candidates are embedded in the SDP.
     let (gather_done_tx, gather_done_rx) = tokio::sync::oneshot::channel::<()>();
@@ -94,19 +103,26 @@ pub async fn accept_offer(
         .ok_or(WebRtcError::NoLocalDescription)?
         .sdp;
 
-    Ok((answer_sdp, peer_connection))
+    Ok(answer_sdp)
 }
 
-/// Run the server-side peer.
+/// Register the host-side handlers on a fresh peer connection.
 ///
-/// Registers callbacks on the peer connection to handle incoming data channel
-/// messages. HTTP requests are proxied to the local backend; WebSocket
-/// connections are bridged. Runs until the shutdown token is cancelled or
-/// the ICE connection disconnects.
-pub async fn run_peer(
-    peer_connection: Arc<RTCPeerConnection>,
+/// HTTP requests arriving on the data channel are proxied to the local
+/// backend; WebSocket connections are bridged. Returns the token that is
+/// cancelled when the peer disconnects — pass it to [`run_peer`].
+///
+/// This is deliberately synchronous and must be called before the peer
+/// connection is given any description. `webrtc-rs` drops an incoming data
+/// channel outright when `on_data_channel` is unset at the moment the SCTP
+/// stream is accepted (see `sctp_transport::accept_data_channels`): the
+/// channel is never surfaced to us, yet its read loop still starts, so the
+/// remote peer sees an open channel whose every message is silently
+/// discarded. Registering after the SDP exchange makes that a race.
+pub fn attach_handlers(
+    peer_connection: &Arc<RTCPeerConnection>,
     config: PeerConfig,
-) -> Result<(), WebRtcError> {
+) -> CancellationToken {
     let http_client = reqwest::Client::new();
 
     // Channel for the data channel writer task.
@@ -280,7 +296,16 @@ pub async fn run_peer(
         }
     });
 
-    // Wait for shutdown or disconnection.
+    disconnect_token
+}
+
+/// Run the server-side peer until it shuts down or the ICE connection drops.
+///
+/// Takes the token returned by [`attach_handlers`].
+pub async fn run_peer(
+    peer_connection: Arc<RTCPeerConnection>,
+    disconnect_token: CancellationToken,
+) -> Result<(), WebRtcError> {
     disconnect_token.cancelled().await;
     let _ = peer_connection.close().await;
     tracing::debug!("[server-peer] peer connection closed");

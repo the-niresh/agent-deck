@@ -39,24 +39,40 @@ impl WebRtcHost {
     ///
     /// Creates a new peer connection and spawns its event loop task.
     pub async fn handle_offer(&self, offer: SdpOffer) -> Result<SdpAnswer, WebRtcError> {
-        let (answer_sdp, peer_connection) = peer::accept_offer(&offer.sdp).await?;
         let session_id = offer.session_id.clone();
 
-        let (old_peer, peer_shutdown, local_backend_addr) = {
+        let (peer_shutdown, local_backend_addr) = {
+            let inner = self.inner.lock().await;
+            (inner.shutdown.child_token(), inner.local_backend_addr)
+        };
+
+        let peer_connection = peer::new_peer_connection().await?;
+
+        // Attach handlers before the offer is applied. `accept_offer` starts
+        // ICE, and a data channel that arrives while `on_data_channel` is
+        // unset is discarded for the lifetime of the connection — see
+        // `peer::attach_handlers`.
+        let disconnect_token = peer::attach_handlers(
+            &peer_connection,
+            PeerConfig {
+                local_backend_addr,
+                shutdown: peer_shutdown.clone(),
+            },
+        );
+
+        let answer_sdp = peer::accept_offer(&peer_connection, &offer.sdp).await?;
+
+        let old_peer = {
             let mut inner = self.inner.lock().await;
             let old_peer = inner.peers.remove(&session_id);
-            let peer_shutdown = inner.shutdown.child_token();
-            let local_backend_addr = inner.local_backend_addr;
 
             let handle = PeerHandle {
                 peer_connection: peer_connection.clone(),
-                shutdown: peer_shutdown.clone(),
+                shutdown: peer_shutdown,
             };
             inner.peers.insert(session_id.clone(), handle);
-            (old_peer, peer_shutdown, local_backend_addr)
+            old_peer
         };
-
-        let inner_ref = Arc::clone(&self.inner);
 
         // Clean up any existing peer with the same session ID.
         if let Some(old_peer) = old_peer {
@@ -64,19 +80,25 @@ impl WebRtcHost {
             let _ = old_peer.peer_connection.close().await;
         }
 
-        tokio::spawn(async move {
-            let config = PeerConfig {
-                local_backend_addr,
-                shutdown: peer_shutdown,
-            };
+        let inner_ref = Arc::clone(&self.inner);
+        let peer_connection_for_task = peer_connection.clone();
 
-            if let Err(e) = peer::run_peer(peer_connection, config).await {
+        tokio::spawn(async move {
+            if let Err(e) = peer::run_peer(peer_connection_for_task, disconnect_token).await {
                 tracing::warn!(?e, %session_id, "WebRTC peer task failed");
             }
 
-            // Remove self from the peer map on exit.
+            // Remove self from the peer map on exit, but only if this peer is
+            // still the registered one: a reconnect reuses the session ID, and
+            // cancelling the old peer must not evict its replacement.
             let mut inner = inner_ref.lock().await;
-            inner.peers.remove(&session_id);
+            let is_current = inner
+                .peers
+                .get(&session_id)
+                .is_some_and(|current| Arc::ptr_eq(&current.peer_connection, &peer_connection));
+            if is_current {
+                inner.peers.remove(&session_id);
+            }
         });
 
         Ok(SdpAnswer {

@@ -267,8 +267,11 @@ impl WebRtcClient {
         let peer_connection = webrtc_offer.peer_connection;
         let data_channel = webrtc_offer.data_channel;
 
+        // Parsed up front so a malformed answer fails before any task is
+        // spawned. It is applied last: `set_remote_description` starts ICE,
+        // and `on_open` / `on_message` fire exactly once each without replay,
+        // so both must be registered before that point.
         let answer = RTCSessionDescription::answer(answer_sdp.to_string())?;
-        peer_connection.set_remote_description(answer).await?;
 
         let (cmd_tx, mut cmd_rx) = mpsc::channel(64);
         let (dc_write_tx, mut dc_write_rx) = mpsc::channel::<Vec<u8>>(64);
@@ -446,6 +449,12 @@ impl WebRtcClient {
                 }
             }
         });
+
+        // All handlers are in place; safe to start the connection.
+        if let Err(error) = peer_connection.set_remote_description(answer).await {
+            disconnect_token.cancel();
+            return Err(error.into());
+        }
 
         Ok(Self {
             cmd_tx,
