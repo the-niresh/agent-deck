@@ -155,7 +155,11 @@ impl R2Service {
         object_key: &str,
         content_type: Option<&str>,
     ) -> Result<String, R2Error> {
-        let mut request = self.client.get_object().bucket(&self.bucket).key(object_key);
+        let mut request = self
+            .client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(object_key);
 
         if let Some(ct) = content_type {
             request = request.response_content_type(ct);
@@ -303,8 +307,9 @@ impl R2Service {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use secrecy::SecretString;
+
+    use super::*;
 
     fn test_service() -> R2Service {
         R2Service::new(&R2Config {

@@ -5,11 +5,11 @@ use tokio::task::JoinHandle;
 use tracing::{info, instrument, warn};
 
 use crate::{
-    r2::R2Service,
     db::{
         attachments::AttachmentRepository, blobs::BlobRepository,
         pending_uploads::PendingUploadRepository,
     },
+    r2::R2Service,
 };
 
 const EXPIRED_BATCH_SIZE: i64 = 100;
@@ -61,10 +61,7 @@ async fn run_sweep(pool: &PgPool, storage: &R2Service) {
     }
 }
 
-async fn cleanup_expired_attachments(
-    pool: &PgPool,
-    storage: &R2Service,
-) -> anyhow::Result<u32> {
+async fn cleanup_expired_attachments(pool: &PgPool, storage: &R2Service) -> anyhow::Result<u32> {
     let expired = AttachmentRepository::find_expired(pool, EXPIRED_BATCH_SIZE).await?;
     let mut deleted_count: u32 = 0;
 

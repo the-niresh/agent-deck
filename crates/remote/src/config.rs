@@ -68,7 +68,6 @@ impl R2Config {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct GitHubAppConfig {
     pub app_id: u64,

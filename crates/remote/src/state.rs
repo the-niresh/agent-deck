@@ -40,7 +40,7 @@ impl AppState {
         server_public_base_url: String,
         http_client: reqwest::Client,
         r2: Option<R2Service>,
-            github_app: Option<Arc<GitHubAppService>>,
+        github_app: Option<Arc<GitHubAppService>>,
         billing: BillingService,
         analytics: Option<AnalyticsService>,
     ) -> Self {

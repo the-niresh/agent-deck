@@ -314,10 +314,9 @@ fn classify_handoff_error(error: &HandoffError) -> (StatusCode, Cow<'_, str>) {
         HandoffError::InvalidChallenge => {
             (StatusCode::BAD_REQUEST, Cow::Borrowed("invalid_challenge"))
         }
-        HandoffError::SignupNotAllowed => (
-            StatusCode::FORBIDDEN,
-            Cow::Borrowed("signup_not_allowed"),
-        ),
+        HandoffError::SignupNotAllowed => {
+            (StatusCode::FORBIDDEN, Cow::Borrowed("signup_not_allowed"))
+        }
         HandoffError::NotFound => (StatusCode::NOT_FOUND, Cow::Borrowed("not_found")),
         HandoffError::Expired => (StatusCode::GONE, Cow::Borrowed("expired")),
         HandoffError::Denied => (StatusCode::FORBIDDEN, Cow::Borrowed("access_denied")),
