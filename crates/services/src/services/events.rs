@@ -3,8 +3,8 @@ use std::{str::FromStr, sync::Arc};
 use db::{
     DBService,
     models::{
-        execution_process::ExecutionProcess, scratch::Scratch, session::Session,
-        workspace::Workspace,
+        coding_agent_turn::CodingAgentTurn, execution_process::ExecutionProcess, scratch::Scratch,
+        session::Session, workspace::Workspace,
     },
 };
 use serde_json::json;
@@ -129,6 +129,41 @@ impl EventService {
                                 (HookTables::Workspaces, SqliteOperation::Delete)
                                 | (HookTables::ExecutionProcesses, SqliteOperation::Delete)
                                 | (HookTables::Scratch, SqliteOperation::Delete) => {
+                                    return;
+                                }
+                                // A turn insert/update flips `has_unseen_turns`
+                                // on the owning workspace. There is no turn
+                                // patch stream, so re-emit the workspace itself
+                                // and stop - the sidebar reads it from there.
+                                (HookTables::CodingAgentTurns, _) => {
+                                    match CodingAgentTurn::find_session_id_by_rowid(
+                                        &db.pool, rowid,
+                                    )
+                                    .await
+                                    {
+                                        Ok(Some(session_id)) => {
+                                            if let Err(e) =
+                                                EventService::push_workspace_update_for_session(
+                                                    &db.pool,
+                                                    msg_store_for_hook.clone(),
+                                                    session_id,
+                                                )
+                                                .await
+                                            {
+                                                tracing::error!(
+                                                    "Failed to push workspace update for turn: {:?}",
+                                                    e
+                                                );
+                                            }
+                                        }
+                                        Ok(None) => {}
+                                        Err(e) => {
+                                            tracing::error!(
+                                                "Failed to resolve session for coding_agent_turn: {:?}",
+                                                e
+                                            );
+                                        }
+                                    }
                                     return;
                                 }
                                 (HookTables::Workspaces, _) => {

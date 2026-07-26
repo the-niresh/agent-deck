@@ -154,7 +154,18 @@ export type UpdateScratch = { payload: ScratchPayload, };
 
 export type Workspace = { id: string, task_id: string | null, container_ref: string | null, branch: string, setup_completed_at: string | null, created_at: string, updated_at: string, archived: boolean, pinned: boolean, name: string | null, worktree_deleted: boolean, };
 
-export type WorkspaceWithStatus = { is_running: boolean, is_errored: boolean, id: string, task_id: string | null, container_ref: string | null, branch: string, setup_completed_at: string | null, created_at: string, updated_at: string, archived: boolean, pinned: boolean, name: string | null, worktree_deleted: boolean, };
+export type WorkspaceWithStatus = { is_running: boolean, is_errored: boolean, 
+/**
+ * Live sidebar signals pushed over the workspace stream.
+ *
+ * These are all cheap, DB-only derivations, so they can be recomputed on
+ * every workspace patch. Deliberately excluded: git diff stats (they shell
+ * out to git per workspace - see `workspace_summary.rs`) and
+ * `has_pending_approval` (held in the in-memory approvals service, which
+ * the DB hook cannot reach; the client reads it from the live approvals
+ * stream instead). Those stay on the polled summary endpoint.
+ */
+has_unseen_turns: boolean, has_running_dev_server: boolean, latest_process_status: ExecutionProcessStatus | null, latest_process_completed_at: string | null, id: string, task_id: string | null, container_ref: string | null, branch: string, setup_completed_at: string | null, created_at: string, updated_at: string, archived: boolean, pinned: boolean, name: string | null, worktree_deleted: boolean, };
 
 export type Session = { id: string, workspace_id: string, name: string | null, executor: string | null, agent_working_dir: string | null, created_at: string, updated_at: string, };
 

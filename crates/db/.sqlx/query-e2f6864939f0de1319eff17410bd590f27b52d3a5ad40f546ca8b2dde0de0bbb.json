@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT ep.session_id AS \"session_id!: Uuid\"\n               FROM coding_agent_turns cat\n               JOIN execution_processes ep ON cat.execution_process_id = ep.id\n               WHERE cat.rowid = $1",
+  "describe": {
+    "columns": [
+      {
+        "name": "session_id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e2f6864939f0de1319eff17410bd590f27b52d3a5ad40f546ca8b2dde0de0bbb"
+}

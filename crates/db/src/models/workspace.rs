@@ -10,7 +10,7 @@ use uuid::Uuid;
 const WORKSPACE_NAME_MAX_LEN: usize = 60;
 
 use super::{
-    execution_process::ExecutorActionField,
+    execution_process::{ExecutionProcessStatus, ExecutorActionField},
     session::Session,
     workspace_repo::{RepoWithTargetBranch, WorkspaceRepo},
 };
@@ -60,6 +60,18 @@ pub struct WorkspaceWithStatus {
     pub workspace: Workspace,
     pub is_running: bool,
     pub is_errored: bool,
+    /// Live sidebar signals pushed over the workspace stream.
+    ///
+    /// These are all cheap, DB-only derivations, so they can be recomputed on
+    /// every workspace patch. Deliberately excluded: git diff stats (they shell
+    /// out to git per workspace - see `workspace_summary.rs`) and
+    /// `has_pending_approval` (held in the in-memory approvals service, which
+    /// the DB hook cannot reach; the client reads it from the live approvals
+    /// stream instead). Those stay on the polled summary endpoint.
+    pub has_unseen_turns: bool,
+    pub has_running_dev_server: bool,
+    pub latest_process_status: Option<ExecutionProcessStatus>,
+    pub latest_process_completed_at: Option<DateTime<Utc>>,
 }
 
 impl std::ops::Deref for WorkspaceWithStatus {
@@ -533,7 +545,47 @@ impl Workspace {
                       AND ep.run_reason IN ('setupscript','cleanupscript','codingagent')
                     ORDER BY ep.created_at DESC
                     LIMIT 1
-                ) IN ('failed','killed') THEN 1 ELSE 0 END AS "is_errored!: i64"
+                ) IN ('failed','killed') THEN 1 ELSE 0 END AS "is_errored!: i64",
+
+                CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM coding_agent_turns cat
+                    JOIN execution_processes ep ON cat.execution_process_id = ep.id
+                    JOIN sessions s ON ep.session_id = s.id
+                    WHERE s.workspace_id = w.id
+                      AND cat.seen = 0
+                    LIMIT 1
+                ) THEN 1 ELSE 0 END AS "has_unseen_turns!: i64",
+
+                CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM sessions s
+                    JOIN execution_processes ep ON ep.session_id = s.id
+                    WHERE s.workspace_id = w.id
+                      AND ep.status = 'running'
+                      AND ep.run_reason = 'devserver'
+                    LIMIT 1
+                ) THEN 1 ELSE 0 END AS "has_running_dev_server!: i64",
+
+                (
+                    SELECT ep.status
+                    FROM sessions s
+                    JOIN execution_processes ep ON ep.session_id = s.id
+                    WHERE s.workspace_id = w.id
+                      AND ep.run_reason IN ('setupscript','cleanupscript','codingagent')
+                    ORDER BY ep.created_at DESC
+                    LIMIT 1
+                ) AS "latest_process_status?: ExecutionProcessStatus",
+
+                (
+                    SELECT ep.completed_at
+                    FROM sessions s
+                    JOIN execution_processes ep ON ep.session_id = s.id
+                    WHERE s.workspace_id = w.id
+                      AND ep.run_reason IN ('setupscript','cleanupscript','codingagent')
+                    ORDER BY ep.created_at DESC
+                    LIMIT 1
+                ) AS "latest_process_completed_at?: DateTime<Utc>"
 
             FROM workspaces w
             ORDER BY w.updated_at DESC"#
@@ -559,6 +611,10 @@ impl Workspace {
                 },
                 is_running: rec.is_running != 0,
                 is_errored: rec.is_errored != 0,
+                has_unseen_turns: rec.has_unseen_turns != 0,
+                has_running_dev_server: rec.has_running_dev_server != 0,
+                latest_process_status: rec.latest_process_status,
+                latest_process_completed_at: rec.latest_process_completed_at,
             })
             // Apply archived filter if provided
             .filter(|ws| archived.is_none_or(|a| ws.workspace.archived == a))
@@ -627,7 +683,47 @@ impl Workspace {
                       AND ep.run_reason IN ('setupscript','cleanupscript','codingagent')
                     ORDER BY ep.created_at DESC
                     LIMIT 1
-                ) IN ('failed','killed') THEN 1 ELSE 0 END AS "is_errored!: i64"
+                ) IN ('failed','killed') THEN 1 ELSE 0 END AS "is_errored!: i64",
+
+                CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM coding_agent_turns cat
+                    JOIN execution_processes ep ON cat.execution_process_id = ep.id
+                    JOIN sessions s ON ep.session_id = s.id
+                    WHERE s.workspace_id = w.id
+                      AND cat.seen = 0
+                    LIMIT 1
+                ) THEN 1 ELSE 0 END AS "has_unseen_turns!: i64",
+
+                CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM sessions s
+                    JOIN execution_processes ep ON ep.session_id = s.id
+                    WHERE s.workspace_id = w.id
+                      AND ep.status = 'running'
+                      AND ep.run_reason = 'devserver'
+                    LIMIT 1
+                ) THEN 1 ELSE 0 END AS "has_running_dev_server!: i64",
+
+                (
+                    SELECT ep.status
+                    FROM sessions s
+                    JOIN execution_processes ep ON ep.session_id = s.id
+                    WHERE s.workspace_id = w.id
+                      AND ep.run_reason IN ('setupscript','cleanupscript','codingagent')
+                    ORDER BY ep.created_at DESC
+                    LIMIT 1
+                ) AS "latest_process_status?: ExecutionProcessStatus",
+
+                (
+                    SELECT ep.completed_at
+                    FROM sessions s
+                    JOIN execution_processes ep ON ep.session_id = s.id
+                    WHERE s.workspace_id = w.id
+                      AND ep.run_reason IN ('setupscript','cleanupscript','codingagent')
+                    ORDER BY ep.created_at DESC
+                    LIMIT 1
+                ) AS "latest_process_completed_at?: DateTime<Utc>"
 
             FROM workspaces w
             WHERE w.id = $1"#,
@@ -656,6 +752,10 @@ impl Workspace {
             },
             is_running: rec.is_running != 0,
             is_errored: rec.is_errored != 0,
+            has_unseen_turns: rec.has_unseen_turns != 0,
+            has_running_dev_server: rec.has_running_dev_server != 0,
+            latest_process_status: rec.latest_process_status,
+            latest_process_completed_at: rec.latest_process_completed_at,
         };
 
         if ws.workspace.name.is_none()

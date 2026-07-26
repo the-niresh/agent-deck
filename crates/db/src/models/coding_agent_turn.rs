@@ -234,6 +234,26 @@ impl CodingAgentTurn {
 
     /// Check if a workspace has any unseen coding agent turns
     /// Find all workspaces that have unseen coding agent turns, filtered by archived status
+    /// Resolve the session that owns the turn stored at `rowid`.
+    ///
+    /// Used by the DB update hook: a turn insert/update changes the owning
+    /// workspace's `has_unseen_turns`, so the workspace patch must be re-emitted
+    /// on the live stream rather than waiting for the polled summary.
+    pub async fn find_session_id_by_rowid(
+        pool: &SqlitePool,
+        rowid: i64,
+    ) -> Result<Option<Uuid>, sqlx::Error> {
+        sqlx::query_scalar!(
+            r#"SELECT ep.session_id AS "session_id!: Uuid"
+               FROM coding_agent_turns cat
+               JOIN execution_processes ep ON cat.execution_process_id = ep.id
+               WHERE cat.rowid = $1"#,
+            rowid
+        )
+        .fetch_optional(pool)
+        .await
+    }
+
     pub async fn find_workspaces_with_unseen(
         pool: &SqlitePool,
         archived: bool,

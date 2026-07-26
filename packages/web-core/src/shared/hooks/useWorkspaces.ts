@@ -71,12 +71,16 @@ function toSidebarWorkspace(
     isRunning: ws.is_running,
     isPinned: ws.pinned,
     isArchived: ws.archived,
-    // Additional data from summary
+    // Live signals from the stream. The summary endpoint also carries these,
+    // but it only refreshes on its poll interval, so the stream value wins.
+    hasRunningDevServer: ws.has_running_dev_server,
+    hasUnseenActivity: ws.has_unseen_turns,
+    latestProcessCompletedAt: ws.latest_process_completed_at ?? undefined,
+    latestProcessStatus: ws.latest_process_status ?? undefined,
+    // Additional data from summary. `has_pending_approval` lives in the
+    // in-memory approvals service, which the DB hook cannot see, so it stays
+    // on the polled summary.
     hasPendingApproval: summary?.has_pending_approval,
-    hasRunningDevServer: summary?.has_running_dev_server,
-    hasUnseenActivity: summary?.has_unseen_turns,
-    latestProcessCompletedAt: summary?.latest_process_completed_at ?? undefined,
-    latestProcessStatus: summary?.latest_process_status ?? undefined,
     prStatus: summary?.pr_status ?? undefined,
     prNumber:
       summary?.pr_number != null ? Number(summary.pr_number) : undefined,

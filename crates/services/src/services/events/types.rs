@@ -25,6 +25,12 @@ pub enum HookTables {
     ExecutionProcesses,
     #[strum(to_string = "scratch")]
     Scratch,
+    /// Tracked so that a new (or newly seen) coding agent turn re-emits the
+    /// owning workspace patch - `has_unseen_turns` drives the sidebar's
+    /// "Needs Attention" grouping and would otherwise only refresh on the
+    /// polled summary interval.
+    #[strum(to_string = "coding_agent_turns")]
+    CodingAgentTurns,
 }
 
 #[derive(Serialize, Deserialize, TS)]
