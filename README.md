@@ -8,10 +8,10 @@
   </a>
 </p>
 
-<p align="center">Get 10X more out of Claude Code, Gemini CLI, Codex, Amp and other coding agents...</p>
+<p align="center">Self-hosted kanban for coding agents. Plan work on a board, let agents run it in isolated workspaces, review the diff before anything is pushed.</p>
 
 > **agent-deck** — a self-hosted fork of [BloopAI/vibe-kanban](https://github.com/BloopAI/vibe-kanban),
-> maintained for private use. Upstream was sunset with its last commit on 2026-04-24 and its
+> maintained independently. Upstream was sunset with its last commit on 2026-04-24 and its
 > hosted cloud is gone, so links to `vibekanban.com`, upstream Discussions, and Discord have
 > been removed rather than left to rot.
 >
@@ -34,7 +34,7 @@
 
 In a world where software engineers spend most of their time planning and reviewing coding agents, the most impactful way to ship more is to get faster at planning and review.
 
-Vibe Kanban is built for this. Use kanban issues to plan work, either privately or with your team. When you're ready to begin, create workspaces where coding agents can execute.
+agent-deck is built for this. Use kanban issues to plan work, either privately or with your team. When you're ready to begin, create workspaces where coding agents can execute.
 
 - **Plan with kanban issues** — create, prioritise, and assign issues on a kanban board
 - **Run coding agents in workspaces** — each workspace gives an agent a branch, a terminal, and a dev server
@@ -217,3 +217,16 @@ When configured, the "Open in VSCode" buttons will generate URLs like `vscode://
 
 Configure this under Settings → General in the app. (Upstream's hosted docs covered this,
 but that site is no longer maintained.)
+
+## Licence and attribution
+
+agent-deck is licensed under the [Apache License 2.0](LICENSE), inherited from upstream.
+
+This is a modified fork of [BloopAI/vibe-kanban](https://github.com/BloopAI/vibe-kanban).
+Upstream's last commit was 2026-04-24; everything after that point in this repository is
+independent work. Changes made in this fork are summarised at the top of this README and
+recorded in full in `git log`.
+
+Copyright for the original work remains with the upstream authors. The Apache 2.0 licence
+grants no rights to upstream's names, logos, or other brand assets — those are not covered
+by the code licence and are not claimed here.
