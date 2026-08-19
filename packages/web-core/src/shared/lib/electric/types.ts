@@ -10,6 +10,17 @@ export interface SyncError {
 }
 
 /**
+ * Current transport state for one Electric shape source.
+ * A fallback state means the collection is using periodic REST snapshots while
+ * it retries the Electric stream.
+ */
+export interface SyncSourceStatus {
+  mode: 'electric' | 'fallback';
+  isDegraded: boolean;
+  retryAttempt: number;
+}
+
+/**
  * Configuration options for creating Electric collections.
  */
 export interface CollectionConfig {
