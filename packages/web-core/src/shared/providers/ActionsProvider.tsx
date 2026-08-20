@@ -9,7 +9,7 @@ import { useParams } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Workspace } from 'shared/types';
 import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
-import { ConfirmDialog } from '@vibe/ui/components/ConfirmDialog';
+import { ConfirmDialog } from '@agent-deck/ui/components/ConfirmDialog';
 import { useHostId } from '@/shared/providers/HostIdProvider';
 import {
   buildKanbanIssueComposerKey,

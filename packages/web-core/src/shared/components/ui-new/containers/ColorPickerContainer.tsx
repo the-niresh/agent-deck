@@ -3,8 +3,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from '@vibe/ui/components/Dropdown';
-import { InlineColorPicker } from '@vibe/ui/components/ColorPicker';
+} from '@agent-deck/ui/components/Dropdown';
+import { InlineColorPicker } from '@agent-deck/ui/components/ColorPicker';
 
 export interface ColorPickerProps {
   value: string;

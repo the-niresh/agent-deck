@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# setup.sh — configure a local self-hosted Vibe Kanban stack.
+# setup.sh — configure a local self-hosted Agent Deck stack.
 #
 # Lives inside the repo at crates/remote/starter/, so the checkout you're
-# running it from IS the Vibe Kanban it configures. Generates JWT + admin
+# running it from IS the Agent Deck it configures. Generates JWT + admin
 # secrets, prompts for host ports + data dir, writes .env.remote at the
 # repo root.
 #
@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ---- Defaults ----------------------------------------------------------------
-DATA_DIR_DEFAULT="$HOME/vibe-kanban-data"
+DATA_DIR_DEFAULT="$HOME/agent-deck-data"
 ADMIN_EMAIL_DEFAULT="admin@local"
 # Default ports avoid low 3000s and 5433 because Windows / Hyper-V / WSL can
 # reserve them at boot.
@@ -147,7 +147,7 @@ Setup complete.
   (Both are in $ENV_PATH if you need them later.)
 
   Or launch this checkout's frontend app yourself:
-    VK_SHARED_API_BASE=http://localhost:$REMOTE_SERVER_PORT \\
+    AGENT_DECK_SHARED_API_BASE=http://localhost:$REMOTE_SERVER_PORT \\
       FRONTEND_PORT=$FRONTEND_PORT pnpm run dev
 
   All ops:  make help

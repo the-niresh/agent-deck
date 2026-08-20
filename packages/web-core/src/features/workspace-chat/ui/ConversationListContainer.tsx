@@ -41,8 +41,8 @@ import { useConversationHistory } from '../model/hooks/useConversationHistory';
 import { useSetTokenUsageInfo } from '../model/contexts/EntriesContext';
 import type { WorkspaceWithSession } from '@/shared/types/attempt';
 import type { RepoWithTargetBranch } from 'shared/types';
-import { ChatEmptyState } from '@vibe/ui/components/ChatEmptyState';
-import { ChatScriptPlaceholder } from '@vibe/ui/components/ChatScriptPlaceholder';
+import { ChatEmptyState } from '@agent-deck/ui/components/ChatEmptyState';
+import { ChatScriptPlaceholder } from '@agent-deck/ui/components/ChatScriptPlaceholder';
 import { ScriptFixerDialog } from '@/shared/dialogs/scripts/ScriptFixerDialog';
 
 interface ConversationListProps {

@@ -1,11 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { create, useModal } from '@ebay/nice-modal-react';
 import { defineModal } from '@/shared/lib/modals';
-import { CommandDialog } from '@vibe/ui/components/Command';
+import { CommandDialog } from '@agent-deck/ui/components/Command';
 import {
   CommandBar,
   type CommandBarGroupItem,
-} from '@vibe/ui/components/CommandBar';
+} from '@agent-deck/ui/components/CommandBar';
 import type {
   PageId,
   ResolvedGroup,

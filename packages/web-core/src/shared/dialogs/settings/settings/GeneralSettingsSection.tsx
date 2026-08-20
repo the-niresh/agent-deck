@@ -34,15 +34,15 @@ import {
   useMobileFontScale,
 } from '@/shared/stores/useUiPreferencesStore';
 import { cn, playSound } from '@/shared/lib/utils';
-import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
-import { IconButton } from '@vibe/ui/components/IconButton';
+import { PrimaryButton } from '@agent-deck/ui/components/PrimaryButton';
+import { IconButton } from '@agent-deck/ui/components/IconButton';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuTriggerButton,
-} from '@vibe/ui/components/Dropdown';
+} from '@agent-deck/ui/components/Dropdown';
 import {
   SettingsCard,
   SettingsCheckbox,

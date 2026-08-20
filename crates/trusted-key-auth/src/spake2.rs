@@ -4,8 +4,8 @@ use spake2::{Ed25519Group, Identity, Password, Spake2, SysRng, UnwrapErr};
 
 use crate::error::TrustedKeyAuthError;
 
-const SPAKE2_CLIENT_ID: &[u8] = b"vibe-kanban-browser";
-const SPAKE2_SERVER_ID: &[u8] = b"vibe-kanban-server";
+const SPAKE2_CLIENT_ID: &[u8] = b"agent-deck-browser";
+const SPAKE2_SERVER_ID: &[u8] = b"agent-deck-server";
 pub const ENROLLMENT_CODE_LENGTH: usize = 6;
 // Excludes visually ambiguous characters: O (vs 0), I (vs 1), L (vs 1), U (vs V)
 const ENROLLMENT_CODE_CHARSET: &[u8] = b"ABCDEFGHJKMNPQRSTVWXYZ0123456789";

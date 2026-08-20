@@ -1,9 +1,9 @@
 {
-  "vibe_kanban": {
+  "agent_deck": {
     "command": "npx",
     "args": [
       "-y",
-      "vibe-kanban@latest",
+      "agent-deck@latest",
       "--mcp"
     ]
   },
@@ -45,10 +45,10 @@
     ]
   },
   "meta": {
-    "vibe_kanban": {
-      "name": "Vibe Kanban",
-      "description": "Create, update and delete Vibe Kanban tasks",
-      "url": "https://www.vibekanban.com/docs/integrations/vibe-kanban-mcp-server",
+    "agent_deck": {
+      "name": "Agent Deck",
+      "description": "Create, update and delete Agent Deck tasks",
+      "url": "https://github.com/the-niresh/agent-deck",
       "icon": "favicon-vk-light.svg"
     },
     "context7": {

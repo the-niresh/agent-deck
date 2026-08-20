@@ -14,7 +14,7 @@ import { defineModal } from '@/shared/lib/modals';
 import type { Repo, UpdateRepo } from 'shared/types';
 import { SearchableDropdownContainer } from '@/shared/components/ui-new/containers/SearchableDropdownContainer';
 import { FolderPickerDialog } from '@/shared/dialogs/shared/FolderPickerDialog';
-import { Button } from '@vibe/ui/components/Button';
+import { Button } from '@agent-deck/ui/components/Button';
 import {
   Dialog,
   DialogContent,
@@ -22,15 +22,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@vibe/ui/components/KeyboardDialog';
+} from '@agent-deck/ui/components/KeyboardDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuTriggerButton,
-} from '@vibe/ui/components/Dropdown';
-import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
+} from '@agent-deck/ui/components/Dropdown';
+import { PrimaryButton } from '@agent-deck/ui/components/PrimaryButton';
 import {
   SettingsCard,
   SettingsField,

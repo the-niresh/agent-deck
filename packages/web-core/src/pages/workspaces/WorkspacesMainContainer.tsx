@@ -9,7 +9,7 @@ import {
 } from 'react';
 import type { Workspace, Session, RepoWithTargetBranch } from 'shared/types';
 import { createWorkspaceWithSession } from '@/shared/types/attempt';
-import { WorkspacesMain } from '@vibe/ui/components/WorkspacesMain';
+import { WorkspacesMain } from '@agent-deck/ui/components/WorkspacesMain';
 import {
   ConversationList,
   type ConversationListHandle,

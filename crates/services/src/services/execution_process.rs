@@ -21,6 +21,7 @@ use tokio::{
     sync::RwLock,
     task::JoinHandle,
 };
+use tracing::Instrument;
 use utils::{
     assets::prod_asset_dir_path,
     execution_logs::{
@@ -31,6 +32,8 @@ use utils::{
     msg_store::MsgStore,
 };
 use uuid::Uuid;
+
+use crate::services::run_logging::execution_run_span;
 
 const MAX_HISTORICAL_LOG_LINE_BYTES: usize = 1024 * 1024;
 
@@ -289,12 +292,14 @@ pub fn spawn_stream_raw_logs_to_storage(
     execution_id: Uuid,
     session_id: Uuid,
 ) -> JoinHandle<()> {
+    let run_span = execution_run_span(execution_id);
     tokio::spawn(async move {
         let mut log_writer =
             match ExecutionLogWriter::new_for_execution(session_id, execution_id).await {
                 Ok(w) => w,
                 Err(e) => {
                     tracing::error!(
+                        run_id = %execution_id,
                         "Failed to create log file writer for execution {}: {}",
                         execution_id,
                         e
@@ -322,6 +327,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                                 log_writer.append_jsonl_line(&jsonl_line_with_newline).await
                             {
                                 tracing::error!(
+                                    run_id = %execution_id,
                                     "Failed to append log line for execution {}: {}",
                                     execution_id,
                                     e
@@ -330,6 +336,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                         }
                         Err(e) => {
                             tracing::error!(
+                                run_id = %execution_id,
                                 "Failed to serialize log message for execution {}: {}",
                                 execution_id,
                                 e
@@ -345,6 +352,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                         .await
                         {
                             tracing::error!(
+                                run_id = %execution_id,
                                 "Failed to update agent_session_id {} for execution process {}: {}",
                                 agent_session_id,
                                 execution_id,
@@ -361,6 +369,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                         .await
                         {
                             tracing::error!(
+                                run_id = %execution_id,
                                 "Failed to update agent_message_id {} for execution process {}: {}",
                                 agent_message_id,
                                 execution_id,
@@ -375,7 +384,8 @@ pub fn spawn_stream_raw_logs_to_storage(
                 }
             }
         }
-    })
+    }
+    .instrument(run_span))
 }
 
 async fn open_execution_log_lines(
@@ -444,7 +454,7 @@ fn stream_log_lines_lossy(
                             }
                             return Some((
                                 Ok(LogMsg::Stderr(format!(
-                                    "[vibe-kanban] Skipped an oversized historical log entry larger than {} bytes.",
+                                    "[agent-deck] Skipped an oversized historical log entry larger than {} bytes.",
                                     MAX_HISTORICAL_LOG_LINE_BYTES
                                 ))),
                                 (reader, bad_lines, oversized_lines),

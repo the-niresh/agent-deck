@@ -19,7 +19,7 @@ use utils::{
 };
 
 #[derive(Debug, Error)]
-pub enum VibeKanbanError {
+pub enum AgentDeckError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
@@ -31,7 +31,7 @@ pub enum VibeKanbanError {
 }
 
 #[derive(Parser, Debug)]
-#[command(name = "vibe-kanban", about = "Run the Vibe Kanban server")]
+#[command(name = "agent-deck", about = "Run the Agent Deck server")]
 struct Cli {
     /// Port to bind the backend server to. Overrides BACKEND_PORT/PORT env vars.
     #[arg(long, value_name = "PORT", value_parser = parse_port)]
@@ -56,7 +56,7 @@ const CLI_ENV_VARS: &[&str] = &[
     "PREVIEW_PROXY_PORT",
 ];
 
-fn main() -> Result<(), VibeKanbanError> {
+fn main() -> Result<(), AgentDeckError> {
     let cli = Cli::parse();
 
     let port = cli
@@ -101,7 +101,7 @@ fn main() -> Result<(), VibeKanbanError> {
 async fn async_main(
     main_std_listener: std::net::TcpListener,
     proxy_std_listener: std::net::TcpListener,
-) -> Result<(), VibeKanbanError> {
+) -> Result<(), AgentDeckError> {
     // Install rustls crypto provider before any TLS operations
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
@@ -116,7 +116,14 @@ async fn async_main(
     );
     let env_filter = EnvFilter::try_new(filter_string).expect("Failed to create tracing filter");
     tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().with_filter(env_filter))
+        .with(
+            tracing_subscriber::fmt::layer()
+                .json()
+                .flatten_event(true)
+                .with_current_span(true)
+                .with_span_list(false)
+                .with_filter(env_filter),
+        )
         .with(sentry_layer())
         .init();
 

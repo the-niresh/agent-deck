@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 
-import { FileTree } from '@vibe/ui/components/FileTree';
+import { FileTree } from '@agent-deck/ui/components/FileTree';
 import {
   buildFileTree,
   filterFileTree,

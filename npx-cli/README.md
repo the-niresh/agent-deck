@@ -1,13 +1,13 @@
-# Vibe Kanban
+# Agent Deck
 
 > A visual project management tool for developers that integrates with git repositories and coding agents like Claude Code and Amp.
 
 ## Quick Start
 
-Run vibe kanban instantly without installation:
+Run agent deck instantly without installation:
 
 ```bash
-npx vibe-kanban
+npx agent-deck
 ```
 
 This will launch the application locally and open it in your browser automatically.
@@ -15,15 +15,15 @@ This will launch the application locally and open it in your browser automatical
 Helpful entrypoints:
 
 ```bash
-npx vibe-kanban --help
-npx vibe-kanban --version
-npx vibe-kanban review --help
-npx vibe-kanban mcp --help
+npx agent-deck --help
+npx agent-deck --version
+npx agent-deck review --help
+npx agent-deck mcp --help
 ```
 
-## What is Vibe Kanban?
+## What is Agent Deck?
 
-Vibe Kanban is a modern project management tool designed specifically for developers. It helps you organize your coding projects with kanban-style task management while providing powerful integrations with git repositories and AI coding agents.
+Agent Deck is a modern project management tool designed specifically for developers. It helps you organize your coding projects with kanban-style task management while providing powerful integrations with git repositories and AI coding agents.
 
 ### ✨ Key Features
 
@@ -76,7 +76,7 @@ Vibe Kanban is a modern project management tool designed specifically for develo
 
 ## Core Functionality
 
-Vibe Kanban provides a complete project management experience with these key capabilities:
+Agent Deck provides a complete project management experience with these key capabilities:
 
 **Project Repository Management**
 
@@ -116,7 +116,7 @@ Vibe Kanban provides a complete project management experience with these key cap
 
 ## Configuration
 
-Vibe Kanban supports customization through its configuration system:
+Agent Deck supports customization through its configuration system:
 
 - **Editor Integration**: Choose your preferred code editor
 - **Sound Notifications**: Customize completion sounds
@@ -176,7 +176,7 @@ Vibe Kanban supports customization through its configuration system:
 **Ready to supercharge your development workflow?**
 
 ```bash
-npx vibe-kanban
+npx agent-deck
 ```
 
 _Start managing your projects with the power of AI coding agents today!_

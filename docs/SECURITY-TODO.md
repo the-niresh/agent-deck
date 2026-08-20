@@ -1,6 +1,6 @@
 # Security backlog (agent-deck fork)
 
-Upstream (BloopAI/vibe-kanban) was sunset on 2026-04-24 with open security issues
+Upstream (BloopAI/agent-deck) was sunset on 2026-04-24 with open security issues
 unpatched. This fork inherits them. Tracked here because upstream will never fix them.
 
 ## Fixed in this fork

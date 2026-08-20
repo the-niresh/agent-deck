@@ -31,7 +31,7 @@ is designed to prevent.
 1. Create a dedicated user (e.g. `agent`).
 2. Give it ownership of the repos you want agents to work in.
 3. Authenticate the coding agent CLI **as that user** (`claude` login, etc.).
-4. Run the vibe-kanban server as that user.
+4. Run the agent-deck server as that user.
 
 The Docker stack (Postgres/Electric/remote-server) is unaffected and needs no change.
 

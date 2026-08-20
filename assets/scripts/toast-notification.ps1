@@ -6,7 +6,7 @@ param(
     [string]$Message,
     
     [Parameter(Mandatory=$false)]
-    [string]$AppName = "Vibe Kanban"
+    [string]$AppName = "Agent Deck"
 )
 
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null

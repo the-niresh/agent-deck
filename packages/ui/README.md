@@ -1,4 +1,4 @@
-# @vibe/ui
+# @agent-deck/ui
 
 Shared UI package for reusable web app primitives.
 

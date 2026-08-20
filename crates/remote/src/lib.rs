@@ -60,7 +60,7 @@ where
     .ok()?;
 
     let service_name =
-        env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "vibe-kanban-remote".to_string());
+        env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "agent-deck-remote".to_string());
 
     let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
         .with_resource(
@@ -75,7 +75,7 @@ where
     // Without this, Drop shuts down the batch exporter and no spans export.
     opentelemetry::global::set_tracer_provider(provider.clone());
 
-    let tracer = provider.tracer("vibe-kanban-remote");
+    let tracer = provider.tracer("agent-deck-remote");
     let layer = tracing_opentelemetry::OpenTelemetryLayer::new(tracer);
     Some(layer.boxed())
 }

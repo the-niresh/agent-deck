@@ -113,7 +113,7 @@ impl Mailer for SmtpMailer {
 
         let html = wrap_html(&format!(
             r#"<h2>You're invited to {org}</h2>
-<p>{inviter} invited you to join <strong>{org}</strong> as {role_str} on Vibe Kanban.</p>
+<p>{inviter} invited you to join <strong>{org}</strong> as {role_str} on Agent Deck.</p>
 <p><a href="{url}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Accept Invitation</a></p>
 <p style="color:#666;font-size:13px;">Or copy this link: {url}</p>"#,
             org = esc(org_name),
@@ -123,7 +123,7 @@ impl Mailer for SmtpMailer {
 
         self.send_html(
             email,
-            &format!("You're invited to join {org_name} on Vibe Kanban"),
+            &format!("You're invited to join {org_name} on Agent Deck"),
             html,
         )
         .await;

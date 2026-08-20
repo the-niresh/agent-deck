@@ -5,8 +5,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@vibe/ui/components/KeyboardDialog';
-import { Button } from '@vibe/ui/components/Button';
+} from '@agent-deck/ui/components/KeyboardDialog';
+import { Button } from '@agent-deck/ui/components/Button';
 import { create, useModal } from '@ebay/nice-modal-react';
 import { AlertTriangle, Info, CheckCircle, XCircle } from 'lucide-react';
 import { defineModal, type ConfirmResult } from '@/shared/lib/modals';

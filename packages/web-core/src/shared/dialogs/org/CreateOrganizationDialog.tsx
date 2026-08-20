@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { create, useModal } from '@ebay/nice-modal-react';
 import { useTranslation } from 'react-i18next';
-import { Alert, AlertDescription } from '@vibe/ui/components/Alert';
-import { Button } from '@vibe/ui/components/Button';
-import { Input } from '@vibe/ui/components/Input';
+import { Alert, AlertDescription } from '@agent-deck/ui/components/Alert';
+import { Button } from '@agent-deck/ui/components/Button';
+import { Input } from '@agent-deck/ui/components/Input';
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@vibe/ui/components/KeyboardDialog';
-import { Label } from '@vibe/ui/components/Label';
+} from '@agent-deck/ui/components/KeyboardDialog';
+import { Label } from '@agent-deck/ui/components/Label';
 import { useOrganizationMutations } from '@/shared/hooks/useOrganizationMutations';
 import { defineModal, type NoProps } from '@/shared/lib/modals';
 

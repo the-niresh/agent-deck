@@ -1,10 +1,10 @@
 [package]
-name = "vibe-kanban-tauri"
+name = "agent-deck-tauri"
 version = "0.1.45"
 edition = "2024"
 
 [[bin]]
-name = "vibe-kanban-tauri"
+name = "agent-deck-tauri"
 path = "src/main.rs"
 
 [build-dependencies]

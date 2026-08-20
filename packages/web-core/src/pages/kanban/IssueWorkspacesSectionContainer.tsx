@@ -17,11 +17,11 @@ import {
   buildWorkspaceCreateInitialState,
   buildWorkspaceCreatePrompt,
 } from '@/shared/lib/workspaceCreateState';
-import { ConfirmDialog } from '@vibe/ui/components/ConfirmDialog';
-import { DeleteWorkspaceDialog } from '@vibe/ui/components/DeleteWorkspaceDialog';
-import type { WorkspaceWithStats } from '@vibe/ui/components/IssueWorkspaceCard';
-import { IssueWorkspacesSection } from '@vibe/ui/components/IssueWorkspacesSection';
-import type { SectionAction } from '@vibe/ui/components/CollapsibleSectionHeader';
+import { ConfirmDialog } from '@agent-deck/ui/components/ConfirmDialog';
+import { DeleteWorkspaceDialog } from '@agent-deck/ui/components/DeleteWorkspaceDialog';
+import type { WorkspaceWithStats } from '@agent-deck/ui/components/IssueWorkspaceCard';
+import { IssueWorkspacesSection } from '@agent-deck/ui/components/IssueWorkspacesSection';
+import type { SectionAction } from '@agent-deck/ui/components/CollapsibleSectionHeader';
 
 interface IssueWorkspacesSectionContainerProps {
   issueId: string;

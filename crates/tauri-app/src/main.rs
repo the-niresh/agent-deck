@@ -117,7 +117,7 @@ fn main() {
 
     let log_level = std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
     let filter_string = format!(
-        "warn,server={level},services={level},db={level},executors={level},deployment={level},local_deployment={level},utils={level},vibe_kanban_tauri={level}",
+        "warn,server={level},services={level},db={level},executors={level},deployment={level},local_deployment={level},utils={level},agent_deck_tauri={level}",
         level = log_level
     );
     let env_filter = EnvFilter::try_new(filter_string).expect("Failed to create tracing filter");
@@ -380,7 +380,7 @@ fn create_window<R: tauri::Runtime, M: tauri::Manager<R>>(
 ) -> Result<tauri::WebviewWindow<R>, tauri::Error> {
     let handle = manager.app_handle().clone();
     let builder = tauri::WebviewWindowBuilder::new(manager, "main", url)
-        .title("Vibe Kanban")
+        .title("Agent Deck")
         .inner_size(1280.0, 800.0)
         .min_inner_size(800.0, 600.0)
         .resizable(true)

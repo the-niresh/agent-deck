@@ -21,7 +21,7 @@ import { useAppRuntime } from '@/shared/hooks/useAppRuntime';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useAuth } from '@/shared/hooks/auth/useAuth';
 import { relayApi } from '@/shared/lib/api';
-import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
+import { PrimaryButton } from '@agent-deck/ui/components/PrimaryButton';
 import {
   SettingsCard,
   SettingsCheckbox,
@@ -34,7 +34,7 @@ import { RemoteCloudHostsSettingsCardContent } from './RemoteCloudHostsSettingsC
 
 const RELAY_PAIRED_CLIENTS_QUERY_KEY = ['relay', 'paired-clients'] as const;
 const RELAY_REMOTE_CONTROL_DOCS_URL =
-  'https://www.vibekanban.com/docs/remote-control';
+  'https://github.com/the-niresh/agent-deck';
 
 interface RelaySettingsSectionInitialState {
   hostId?: string;

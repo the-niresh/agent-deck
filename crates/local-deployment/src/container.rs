@@ -50,9 +50,11 @@ use services::services::{
     queued_message::QueuedMessageService,
     remote_client::RemoteClient,
     remote_sync,
+    run_logging::execution_run_span,
 };
 use tokio::{sync::RwLock, task::JoinHandle};
 use tokio_util::io::ReaderStream;
+use tracing::Instrument;
 use utils::{
     log_msg::LogMsg,
     msg_store::MsgStore,
@@ -486,6 +488,7 @@ impl LocalContainerService {
         let analytics = self.analytics.clone();
 
         let mut process_exit_rx = self.spawn_os_exit_watcher(exec_id);
+        let run_span = execution_run_span(exec_id);
 
         tokio::spawn(async move {
             let mut exit_signal_future = exit_signal
@@ -533,6 +536,8 @@ impl LocalContainerService {
                 }
                 Err(_) => (None, ExecutionProcessStatus::Failed),
             };
+
+            tracing::info!(run_id = %exec_id, ?status, exit_code, "Execution run finished");
 
             if !ExecutionProcess::was_stopped(&db.pool, exec_id).await
                 && let Err(e) =
@@ -804,7 +809,7 @@ impl LocalContainerService {
                 let _ = child.start_kill();
             }
             child_store.write().await.remove(&exec_id);
-        })
+        }.instrument(run_span))
     }
 
     fn spawn_os_exit_watcher(

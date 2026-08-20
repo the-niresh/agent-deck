@@ -25,25 +25,25 @@ import { SettingsDialog } from '@/shared/dialogs/settings/SettingsDialog';
 import {
   WorkspacesSidebar,
   type WorkspacesSidebarPersistKeys,
-} from '@vibe/ui/components/WorkspacesSidebar';
+} from '@agent-deck/ui/components/WorkspacesSidebar';
 import {
   MultiSelectDropdown,
   type MultiSelectDropdownOption,
-} from '@vibe/ui/components/MultiSelectDropdown';
-import { PropertyDropdown } from '@vibe/ui/components/PropertyDropdown';
-import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
-import { IconButton } from '@vibe/ui/components/IconButton';
+} from '@agent-deck/ui/components/MultiSelectDropdown';
+import { PropertyDropdown } from '@agent-deck/ui/components/PropertyDropdown';
+import { PrimaryButton } from '@agent-deck/ui/components/PrimaryButton';
+import { IconButton } from '@agent-deck/ui/components/IconButton';
 import {
   ButtonGroup,
   ButtonGroupItem,
-} from '@vibe/ui/components/IconButtonGroup';
+} from '@agent-deck/ui/components/IconButtonGroup';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@vibe/ui/components/Dialog';
+} from '@agent-deck/ui/components/Dialog';
 import {
   FunnelIcon,
   FolderIcon,

@@ -55,7 +55,7 @@ async fn get_context(
 
 pub(super) fn router(_deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     Router::new()
-        // NOTE: /containers/info is required by the VSCode extension (vibe-kanban-vscode)
+        // NOTE: /containers/info is required by the VSCode extension (agent-deck-vscode)
         // to auto-detect workspaces. It maps workspace_id to attempt_id for compatibility.
         // Do not remove this endpoint without updating the extension.
         .route("/containers/info", get(get_container_info))

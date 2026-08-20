@@ -49,6 +49,7 @@ use json_patch::Patch;
 use sqlx::Error as SqlxError;
 use thiserror::Error;
 use tokio::{sync::RwLock, task::JoinHandle};
+use tracing::Instrument;
 use utils::{
     log_msg::LogMsg,
     msg_store::MsgStore,
@@ -57,7 +58,9 @@ use utils::{
 use uuid::Uuid;
 use worktree_manager::WorktreeError;
 
-use crate::services::{execution_process, notification::NotificationService};
+use crate::services::{
+    execution_process, notification::NotificationService, run_logging::execution_run_span,
+};
 pub type ContainerRef = String;
 
 const HISTORICAL_NORMALIZATION_HISTORY_BYTES: usize = 8 * 1024 * 1024;
@@ -1204,6 +1207,15 @@ pub trait ContainerService {
             &repo_states,
         )
         .await?;
+        let run_span = execution_run_span(execution_process.id);
+        tracing::info!(
+            parent: &run_span,
+            run_id = %execution_process.id,
+            session_id = %session.id,
+            workspace_id = %workspace.id,
+            run_reason = ?run_reason,
+            "Execution run created"
+        );
         self.msg_stores()
             .write()
             .await
@@ -1254,8 +1266,15 @@ pub trait ContainerService {
 
         if let Err(start_error) = self
             .start_execution_inner(workspace, &execution_process, executor_action)
+            .instrument(run_span.clone())
             .await
         {
+            tracing::error!(
+                parent: &run_span,
+                run_id = %execution_process.id,
+                error = %start_error,
+                "Execution run failed to start"
+            );
             self.msg_stores()
                 .write()
                 .await
@@ -1378,6 +1397,11 @@ pub trait ContainerService {
             self.db().clone(),
             execution_process.id,
             session.id,
+        );
+        tracing::info!(
+            parent: &run_span,
+            run_id = %execution_process.id,
+            "Execution run started"
         );
         Ok(execution_process)
     }

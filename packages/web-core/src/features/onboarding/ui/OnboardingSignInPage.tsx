@@ -10,8 +10,8 @@ import {
 import { usePostHog } from 'posthog-js/react';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useTheme } from '@/shared/hooks/useTheme';
-import { OAuthSignInButton } from '@vibe/ui/components/OAuthButtons';
-import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
+import { OAuthSignInButton } from '@agent-deck/ui/components/OAuthButtons';
+import { PrimaryButton } from '@agent-deck/ui/components/PrimaryButton';
 import { oauthApi, type AuthMethodsResponse } from '@/shared/lib/api';
 import { getFirstProjectDestination } from '@/shared/lib/firstProjectDestination';
 import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
@@ -114,8 +114,8 @@ export function OnboardingSignInPage() {
 
   const logoSrc =
     resolveTheme(theme) === 'dark'
-      ? '/vibe-kanban-logo-dark.svg'
-      : '/vibe-kanban-logo.svg';
+      ? '/agent-deck-logo-dark.svg'
+      : '/agent-deck-logo.svg';
 
   const isLoggedIn = loginStatus?.status === 'loggedin';
 
@@ -276,11 +276,7 @@ export function OnboardingSignInPage() {
         <div className="rounded-sm border border-border bg-secondary p-double space-y-double">
           <header className="space-y-double text-center">
             <div className="flex justify-center">
-              <img
-                src={logoSrc}
-                alt="Vibe Kanban"
-                className="h-8 w-auto logo"
-              />
+              <img src={logoSrc} alt="Agent Deck" className="h-8 w-auto logo" />
             </div>
             {!isLoggedIn && (
               <p className="text-sm text-low">

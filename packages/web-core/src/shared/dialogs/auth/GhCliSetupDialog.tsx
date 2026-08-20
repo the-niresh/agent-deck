@@ -4,14 +4,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@vibe/ui/components/KeyboardDialog';
-import { Button } from '@vibe/ui/components/Button';
+} from '@agent-deck/ui/components/KeyboardDialog';
+import { Button } from '@agent-deck/ui/components/Button';
 import { create, useModal } from '@ebay/nice-modal-react';
 import { defineModal, getErrorMessage } from '@/shared/lib/modals';
 import { workspacesApi } from '@/shared/lib/api';
 import type { GhCliSetupError } from 'shared/types';
 import { useRef, useState } from 'react';
-import { Alert, AlertDescription } from '@vibe/ui/components/Alert';
+import { Alert, AlertDescription } from '@agent-deck/ui/components/Alert';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 

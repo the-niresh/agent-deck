@@ -7,8 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@vibe/ui/components/KeyboardDialog';
-import { Button } from '@vibe/ui/components/Button';
+} from '@agent-deck/ui/components/KeyboardDialog';
+import { Button } from '@agent-deck/ui/components/Button';
 import BranchSelector from '@/shared/components/tasks/BranchSelector';
 import type { GitBranch } from 'shared/types';
 import { create, useModal } from '@ebay/nice-modal-react';

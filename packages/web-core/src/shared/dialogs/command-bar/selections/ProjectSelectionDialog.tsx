@@ -3,11 +3,11 @@ import { create, useModal } from '@ebay/nice-modal-react';
 import { defineModal } from '@/shared/lib/modals';
 import { ProjectProvider } from '@/shared/providers/remote/ProjectProvider';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';
-import { CommandDialog } from '@vibe/ui/components/Command';
+import { CommandDialog } from '@agent-deck/ui/components/Command';
 import {
   CommandBar,
   type CommandBarGroupItem,
-} from '@vibe/ui/components/CommandBar';
+} from '@agent-deck/ui/components/CommandBar';
 import type { PageId, ResolvedGroupItem } from '@/shared/types/commandBar';
 import type { StatusItem } from '@/shared/types/selectionItems';
 import type { Issue } from 'shared/remote-types';

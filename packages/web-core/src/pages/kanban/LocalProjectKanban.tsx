@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ProjectsGuideDialog } from '@vibe/ui/components/ProjectsGuideDialog';
+import { ProjectsGuideDialog } from '@agent-deck/ui/components/ProjectsGuideDialog';
 import { useAuth } from '@/shared/hooks/auth/useAuth';
 import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { ProjectKanban } from '@/pages/kanban/ProjectKanban';
