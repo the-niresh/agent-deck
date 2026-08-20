@@ -28,12 +28,15 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.setTag('source', 'frontend');
 }
 
-if (
-  import.meta.env.VITE_POSTHOG_API_KEY &&
-  import.meta.env.VITE_POSTHOG_API_ENDPOINT
-) {
-  posthog.init(import.meta.env.VITE_POSTHOG_API_KEY, {
-    api_host: import.meta.env.VITE_POSTHOG_API_ENDPOINT,
+const posthogKey =
+  import.meta.env.VITE_POSTHOG_KEY ?? import.meta.env.VITE_POSTHOG_API_KEY;
+const posthogHost =
+  import.meta.env.VITE_POSTHOG_HOST ??
+  import.meta.env.VITE_POSTHOG_API_ENDPOINT;
+
+if (posthogKey && posthogHost) {
+  posthog.init(posthogKey, {
+    api_host: posthogHost,
     capture_pageview: false,
     capture_pageleave: true,
     capture_performance: true,
