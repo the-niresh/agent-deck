@@ -233,7 +233,7 @@ caddy run --config Caddyfile.dev
 
 # Terminal 4 (optional) — Local desktop client
 AGENT_DECK_SHARED_API_BASE=https://$TS_HOSTNAME:3001 \
-VK_SHARED_RELAY_API_BASE=https://$TS_HOSTNAME:8443 \
+AGENT_DECK_SHARED_RELAY_API_BASE=https://$TS_HOSTNAME:8443 \
 pnpm run dev
 ```
 
@@ -283,7 +283,7 @@ caddy run --config Caddyfile.dev
 
 # Terminal 4 (optional) — Desktop client
 AGENT_DECK_SHARED_API_BASE=https://$TS_HOSTNAME:3001 \
-VK_SHARED_RELAY_API_BASE=https://$TS_HOSTNAME:8443 \
+AGENT_DECK_SHARED_RELAY_API_BASE=https://$TS_HOSTNAME:8443 \
 pnpm run dev
 
 # On phone

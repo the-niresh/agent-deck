@@ -129,7 +129,7 @@ Update your OAuth callback URLs accordingly:
 
 ```bash
 export AGENT_DECK_SHARED_API_BASE=https://localhost:3001
-export VK_SHARED_RELAY_API_BASE=https://relay.localhost:3001
+export AGENT_DECK_SHARED_RELAY_API_BASE=https://relay.localhost:3001
 
 pnpm run dev
 ```
