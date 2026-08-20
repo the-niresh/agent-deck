@@ -1,4 +1,7 @@
-use std::sync::{Arc, OnceLock};
+use std::{
+    process::Stdio,
+    sync::{Arc, OnceLock},
+};
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
@@ -106,17 +109,23 @@ impl NotificationService {
         if cfg!(target_os = "macos") {
             let _ = tokio::process::Command::new("afplay")
                 .arg(&file_path)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
                 .spawn();
         } else if cfg!(target_os = "linux") && !utils::is_wsl2() {
             // Try different Linux audio players
             if tokio::process::Command::new("paplay")
                 .arg(&file_path)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
                 .spawn()
                 .is_ok()
             {
                 // Success with paplay
             } else if tokio::process::Command::new("aplay")
                 .arg(&file_path)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
                 .spawn()
                 .is_ok()
             {
@@ -126,6 +135,8 @@ impl NotificationService {
                 let _ = tokio::process::Command::new("echo")
                     .arg("-e")
                     .arg("\\a")
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
                     .spawn();
             }
         } else if cfg!(target_os = "windows") || (cfg!(target_os = "linux") && utils::is_wsl2()) {
@@ -146,6 +157,8 @@ impl NotificationService {
                     r#"(New-Object Media.SoundPlayer "{file_path}").PlaySync()"#
                 ))
                 .no_window()
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
                 .spawn();
         }
     }
@@ -174,25 +187,28 @@ async fn send_linux_notification(title: &str, message: &str) {
     let title = title.to_string();
     let message = message.to_string();
 
+    let notification_span = tracing::Span::current();
     let _handle = tokio::task::spawn_blocking(move || {
-        match Notification::new()
-            .summary(&title)
-            .body(&message)
-            .timeout(10000)
-            .show()
-        {
-            Ok(_) => {}
-            Err(e) => {
-                let err_str = e.to_string();
-                if err_str.contains("ServiceUnknown")
-                    || err_str.contains("org.freedesktop.Notifications")
-                {
-                    tracing::warn!("Linux notification daemon not available: {}", e);
-                } else {
-                    tracing::warn!("Failed to send Linux notification: {}", e);
+        notification_span.in_scope(|| {
+            match Notification::new()
+                .summary(&title)
+                .body(&message)
+                .timeout(10000)
+                .show()
+            {
+                Ok(_) => {}
+                Err(e) => {
+                    let err_str = e.to_string();
+                    if err_str.contains("ServiceUnknown")
+                        || err_str.contains("org.freedesktop.Notifications")
+                    {
+                        tracing::warn!("Linux notification daemon not available: {}", e);
+                    } else {
+                        tracing::warn!("Failed to send Linux notification: {}", e);
+                    }
                 }
             }
-        }
+        });
     });
     drop(_handle); // Don't await, fire-and-forget
 }
@@ -229,6 +245,8 @@ async fn send_windows_notification(title: &str, message: &str) {
         .arg("-Message")
         .arg(message)
         .no_window()
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn();
 }
 

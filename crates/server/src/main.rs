@@ -1,3 +1,5 @@
+use std::fmt;
+
 use anyhow::{self, Error as AnyhowError};
 use axum::Router;
 use clap::Parser;
@@ -11,7 +13,16 @@ use strip_ansi_escapes::strip;
 use thiserror::Error;
 use tokio_util::sync::CancellationToken;
 use tower_http::validate_request::ValidateRequestHeaderLayer;
-use tracing_subscriber::{EnvFilter, prelude::*};
+use tracing::{Event, Subscriber};
+use tracing_subscriber::{
+    EnvFilter,
+    fmt::{
+        FmtContext, FormatEvent, FormatFields, FormattedFields,
+        format::{JsonFields, Writer},
+    },
+    prelude::*,
+    registry::LookupSpan,
+};
 use utils::{
     assets::asset_dir,
     port_file::write_port_file_with_proxy,
@@ -55,6 +66,87 @@ const CLI_ENV_VARS: &[&str] = &[
     "FRONTEND_PORT",
     "PREVIEW_PROXY_PORT",
 ];
+
+/// JSON formatter that promotes the active execution span's run ID to each event.
+///
+/// `tracing_subscriber` normally stores span fields below `span`. Keeping the
+/// run ID at the event root lets operators select a full execution with jq.
+struct RunIdJson;
+
+impl<S, N> FormatEvent<S, N> for RunIdJson
+where
+    S: Subscriber + for<'lookup> LookupSpan<'lookup>,
+    N: for<'writer> FormatFields<'writer> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: Writer<'_>,
+        event: &Event<'_>,
+    ) -> fmt::Result {
+        let serializer = serde_json::value::Serializer;
+        let map =
+            serde::ser::Serializer::serialize_map(serializer, None).map_err(|_| fmt::Error)?;
+        let mut visitor = tracing_serde::SerdeMapVisitor::new(map);
+        event.record(&mut visitor);
+        let event_fields = visitor
+            .take_serializer()
+            .and_then(serde::ser::SerializeMap::end)
+            .map_err(|_| fmt::Error)?;
+
+        let mut record = match event_fields {
+            serde_json::Value::Object(fields) => fields,
+            _ => return Err(fmt::Error),
+        };
+
+        record.insert(
+            "timestamp".to_string(),
+            serde_json::Value::String(
+                chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
+            ),
+        );
+        record.insert(
+            "level".to_string(),
+            serde_json::Value::String(event.metadata().level().to_string()),
+        );
+        record.insert(
+            "target".to_string(),
+            serde_json::Value::String(event.metadata().target().to_string()),
+        );
+
+        let mut current_span = None;
+        if let Some(scope) = ctx.event_scope() {
+            for span in scope.from_root() {
+                let span_fields =
+                    span.extensions()
+                        .get::<FormattedFields<N>>()
+                        .and_then(|fields| {
+                            serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(
+                                fields,
+                            )
+                            .ok()
+                        });
+
+                if let Some(fields) = span_fields {
+                    if !record.contains_key("run_id") {
+                        if let Some(run_id) = fields.get("run_id") {
+                            record.insert("run_id".to_string(), run_id.clone());
+                        }
+                    }
+                    current_span = Some((span.metadata().name().to_string(), fields));
+                }
+            }
+        }
+
+        if let Some((name, mut fields)) = current_span {
+            fields.insert("name".to_string(), serde_json::Value::String(name));
+            record.insert("span".to_string(), serde_json::Value::Object(fields));
+        }
+
+        let json = serde_json::to_string(&record).map_err(|_| fmt::Error)?;
+        writeln!(writer, "{json}")
+    }
+}
 
 fn main() -> Result<(), AgentDeckError> {
     let cli = Cli::parse();
@@ -118,10 +210,8 @@ async fn async_main(
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
-                .json()
-                .flatten_event(true)
-                .with_current_span(true)
-                .with_span_list(false)
+                .fmt_fields(JsonFields::new())
+                .event_format(RunIdJson)
                 .with_filter(env_filter),
         )
         .with(sentry_layer())
