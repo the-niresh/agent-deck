@@ -128,10 +128,10 @@ where
                         });
 
                 if let Some(fields) = span_fields {
-                    if !record.contains_key("run_id") {
-                        if let Some(run_id) = fields.get("run_id") {
-                            record.insert("run_id".to_string(), run_id.clone());
-                        }
+                    if !record.contains_key("run_id")
+                        && let Some(run_id) = fields.get("run_id")
+                    {
+                        record.insert("run_id".to_string(), run_id.clone());
                     }
                     current_span = Some((span.metadata().name().to_string(), fields));
                 }
@@ -216,6 +216,9 @@ async fn async_main(
         )
         .with(sentry_layer())
         .init();
+    std::panic::set_hook(Box::new(|panic| {
+        tracing::error!(panic = %panic, "Unhandled panic");
+    }));
 
     // Create asset directory if it doesn't exist
     if !asset_dir().exists() {
@@ -385,11 +388,9 @@ pub async fn shutdown_signal() {
 }
 
 pub async fn perform_cleanup_actions(deployment: &DeploymentImpl) {
-    deployment
-        .container()
-        .kill_all_running_processes()
-        .await
-        .expect("Failed to cleanly kill running execution processes");
+    if let Err(error) = deployment.container().kill_all_running_processes().await {
+        tracing::error!(%error, "Failed to cleanly kill running execution processes");
+    }
 }
 
 fn parse_port(value: &str) -> Result<u16, String> {
@@ -407,7 +408,7 @@ fn read_port_from_env(name: &str) -> Option<u16> {
         .and_then(|value| match parse_port(&value) {
             Ok(port) => Some(port),
             Err(err) => {
-                eprintln!("Ignoring invalid {name} value '{value}': {err}");
+                tracing::warn!("Ignoring invalid {name} value '{value}': {err}");
                 None
             }
         })

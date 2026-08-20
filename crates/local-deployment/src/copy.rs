@@ -210,14 +210,14 @@ mod tests {
     fn test_copy_project_files_outside_source_skips_without_copying() {
         let source_dir = TempDir::new().unwrap();
         let target_dir = TempDir::new().unwrap();
+        let outside_dir = TempDir::new().unwrap();
 
-        // Create file outside of source directory (one level up)
-        let parent_dir = source_dir.path().parent().unwrap().to_path_buf();
-        let outside_file = parent_dir.join("secret.txt");
+        // Create file outside of the source directory in an isolated temp directory.
+        let outside_file = outside_dir.path().join("secret.txt");
         fs::write(&outside_file, "secret").unwrap();
 
-        // Pattern referencing parent directory should resolve to outside_file and be rejected
-        let result = copy_project_files_impl(source_dir.path(), target_dir.path(), "../secret.txt");
+        let pattern = format!("../{}/secret.txt", outside_dir.path().file_name().unwrap().to_string_lossy());
+        let result = copy_project_files_impl(source_dir.path(), target_dir.path(), &pattern);
 
         assert!(result.is_ok());
         assert_eq!(fs::read_dir(target_dir.path()).unwrap().count(), 0);
