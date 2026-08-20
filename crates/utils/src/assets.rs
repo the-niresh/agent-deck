@@ -27,8 +27,15 @@ pub fn prod_asset_dir_path() -> std::path::PathBuf {
     let new_asset_dir = project_data_dir("agent-deck");
     let legacy_asset_dir = project_data_dir("vibe-kanban");
 
-    migrate_legacy_asset_dir(&legacy_asset_dir, &new_asset_dir)
-        .expect("Failed to prepare Agent Deck asset directory");
+    if let Err(error) = migrate_legacy_asset_dir(&legacy_asset_dir, &new_asset_dir) {
+        tracing::error!(
+            from = %legacy_asset_dir.display(),
+            to = %new_asset_dir.display(),
+            error = %error,
+            "Failed to prepare Agent Deck asset directory. Move the data directory manually before restarting."
+        );
+        std::process::exit(1);
+    }
 
     new_asset_dir
 }
@@ -41,6 +48,19 @@ fn project_data_dir(application: &str) -> std::path::PathBuf {
 }
 
 fn migrate_legacy_asset_dir(legacy_asset_dir: &Path, new_asset_dir: &Path) -> io::Result<()> {
+    migrate_legacy_asset_dir_with_rename(legacy_asset_dir, new_asset_dir, |from, to| {
+        std::fs::rename(from, to)
+    })
+}
+
+fn migrate_legacy_asset_dir_with_rename<F>(
+    legacy_asset_dir: &Path,
+    new_asset_dir: &Path,
+    rename: F,
+) -> io::Result<()>
+where
+    F: FnOnce(&Path, &Path) -> io::Result<()>,
+{
     if new_asset_dir.exists() {
         return Ok(());
     }
@@ -51,11 +71,34 @@ fn migrate_legacy_asset_dir(legacy_asset_dir: &Path, new_asset_dir: &Path) -> io
             to = %new_asset_dir.display(),
             "Migrating application data directory"
         );
-        std::fs::rename(legacy_asset_dir, new_asset_dir)?;
+        match rename(legacy_asset_dir, new_asset_dir) {
+            Ok(()) => {}
+            Err(error) if error.kind() == io::ErrorKind::CrossesDevices => {
+                copy_dir_all(legacy_asset_dir, new_asset_dir)?;
+                std::fs::remove_dir_all(legacy_asset_dir)?;
+            }
+            Err(error) if new_asset_dir.exists() => return Ok(()),
+            Err(error) => return Err(error),
+        }
     } else {
         std::fs::create_dir_all(new_asset_dir)?;
     }
 
+    Ok(())
+}
+
+fn copy_dir_all(source: &Path, destination: &Path) -> io::Result<()> {
+    std::fs::create_dir_all(destination)?;
+    for entry in std::fs::read_dir(source)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir_all(&source_path, &destination_path)?;
+        } else {
+            std::fs::copy(source_path, destination_path)?;
+        }
+    }
     Ok(())
 }
 
@@ -93,9 +136,9 @@ pub struct ScriptAssets;
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{fs, io};
 
-    use super::migrate_legacy_asset_dir;
+    use super::{migrate_legacy_asset_dir, migrate_legacy_asset_dir_with_rename};
 
     #[test]
     fn moves_legacy_data_when_new_directory_does_not_exist() {
@@ -146,5 +189,42 @@ mod tests {
 
         assert!(!legacy_dir.exists());
         assert!(new_dir.is_dir());
+    }
+
+    #[test]
+    fn copies_legacy_data_when_rename_crosses_filesystems() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let legacy_dir = temp_dir.path().join("vibe-kanban");
+        let new_dir = temp_dir.path().join("agent-deck");
+        fs::create_dir_all(legacy_dir.join("nested")).unwrap();
+        fs::write(legacy_dir.join("nested/db.v2.sqlite"), "existing data").unwrap();
+
+        migrate_legacy_asset_dir_with_rename(&legacy_dir, &new_dir, |_, _| {
+            Err(io::Error::from(io::ErrorKind::CrossesDevices))
+        })
+        .unwrap();
+
+        assert!(!legacy_dir.exists());
+        assert_eq!(
+            fs::read_to_string(new_dir.join("nested/db.v2.sqlite")).unwrap(),
+            "existing data"
+        );
+    }
+
+    #[test]
+    fn accepts_a_directory_created_by_a_racing_process() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let legacy_dir = temp_dir.path().join("vibe-kanban");
+        let new_dir = temp_dir.path().join("agent-deck");
+        fs::create_dir(&legacy_dir).unwrap();
+
+        migrate_legacy_asset_dir_with_rename(&legacy_dir, &new_dir, |_, destination| {
+            fs::create_dir(destination)?;
+            Err(io::Error::new(io::ErrorKind::AlreadyExists, "raced"))
+        })
+        .unwrap();
+
+        assert!(new_dir.is_dir());
+        assert!(legacy_dir.is_dir());
     }
 }
