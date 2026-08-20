@@ -1,4 +1,7 @@
-use std::{io, path::Path};
+use std::{
+    io,
+    path::{Path, PathBuf},
+};
 
 use directories::ProjectDirs;
 use rust_embed::RustEmbed;
@@ -9,7 +12,12 @@ pub fn asset_dir() -> std::path::PathBuf {
     let path = if cfg!(debug_assertions) {
         std::path::PathBuf::from(PROJECT_ROOT).join("../../dev_assets")
     } else {
-        prod_asset_dir_path()
+        prod_asset_dir_path().unwrap_or_else(|error| {
+            eprintln!(
+                "Failed to prepare Agent Deck asset directory: {error}. Move the data directory manually before restarting."
+            );
+            panic!("Failed to prepare Agent Deck asset directory: {error}");
+        })
     };
 
     // Ensure the directory exists
@@ -23,21 +31,13 @@ pub fn asset_dir() -> std::path::PathBuf {
     // ✔ Windows → %APPDATA%\Example\MyApp
 }
 
-pub fn prod_asset_dir_path() -> std::path::PathBuf {
+pub fn prod_asset_dir_path() -> io::Result<std::path::PathBuf> {
     let new_asset_dir = project_data_dir("agent-deck");
     let legacy_asset_dir = project_data_dir("vibe-kanban");
 
-    if let Err(error) = migrate_legacy_asset_dir(&legacy_asset_dir, &new_asset_dir) {
-        tracing::error!(
-            from = %legacy_asset_dir.display(),
-            to = %new_asset_dir.display(),
-            error = %error,
-            "Failed to prepare Agent Deck asset directory. Move the data directory manually before restarting."
-        );
-        std::process::exit(1);
-    }
+    migrate_legacy_asset_dir(&legacy_asset_dir, &new_asset_dir)?;
 
-    new_asset_dir
+    Ok(new_asset_dir)
 }
 
 fn project_data_dir(application: &str) -> std::path::PathBuf {
@@ -48,11 +48,15 @@ fn project_data_dir(application: &str) -> std::path::PathBuf {
 }
 
 fn migrate_legacy_asset_dir(legacy_asset_dir: &Path, new_asset_dir: &Path) -> io::Result<()> {
-    migrate_legacy_asset_dir_with_rename(legacy_asset_dir, new_asset_dir, |from, to| {
-        std::fs::rename(from, to)
-    })
+    migrate_legacy_asset_dir_with_ops(
+        legacy_asset_dir,
+        new_asset_dir,
+        |from, to| std::fs::rename(from, to),
+        copy_dir_all,
+    )
 }
 
+#[cfg(test)]
 fn migrate_legacy_asset_dir_with_rename<F>(
     legacy_asset_dir: &Path,
     new_asset_dir: &Path,
@@ -60,6 +64,19 @@ fn migrate_legacy_asset_dir_with_rename<F>(
 ) -> io::Result<()>
 where
     F: FnOnce(&Path, &Path) -> io::Result<()>,
+{
+    migrate_legacy_asset_dir_with_ops(legacy_asset_dir, new_asset_dir, rename, copy_dir_all)
+}
+
+fn migrate_legacy_asset_dir_with_ops<F, C>(
+    legacy_asset_dir: &Path,
+    new_asset_dir: &Path,
+    rename: F,
+    copy: C,
+) -> io::Result<()>
+where
+    F: FnOnce(&Path, &Path) -> io::Result<()>,
+    C: FnOnce(&Path, &Path) -> io::Result<()>,
 {
     if new_asset_dir.exists() {
         return Ok(());
@@ -74,7 +91,7 @@ where
         match rename(legacy_asset_dir, new_asset_dir) {
             Ok(()) => {}
             Err(error) if error.kind() == io::ErrorKind::CrossesDevices => {
-                copy_dir_all(legacy_asset_dir, new_asset_dir)?;
+                copy_dir_all_into_sibling_temp(legacy_asset_dir, new_asset_dir, copy)?;
                 std::fs::remove_dir_all(legacy_asset_dir)?;
             }
             Err(error) if new_asset_dir.exists() => return Ok(()),
@@ -85,6 +102,45 @@ where
     }
 
     Ok(())
+}
+
+fn copy_dir_all_into_sibling_temp<C>(source: &Path, destination: &Path, copy: C) -> io::Result<()>
+where
+    C: FnOnce(&Path, &Path) -> io::Result<()>,
+{
+    let parent = destination.parent().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "asset directory destination has no parent",
+        )
+    })?;
+    let temp_destination = migration_temp_dir(parent, destination);
+
+    if temp_destination.exists() {
+        std::fs::remove_dir_all(&temp_destination)?;
+    }
+
+    match copy(source, &temp_destination) {
+        Ok(()) => {
+            if let Err(error) = std::fs::rename(&temp_destination, destination) {
+                let _ = std::fs::remove_dir_all(&temp_destination);
+                return Err(error);
+            }
+            Ok(())
+        }
+        Err(error) => {
+            let _ = std::fs::remove_dir_all(&temp_destination);
+            Err(error)
+        }
+    }
+}
+
+fn migration_temp_dir(parent: &Path, destination: &Path) -> PathBuf {
+    let name = destination
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("agent-deck");
+    parent.join(format!(".{name}.migration-tmp-{}", std::process::id()))
 }
 
 fn copy_dir_all(source: &Path, destination: &Path) -> io::Result<()> {
@@ -138,7 +194,10 @@ pub struct ScriptAssets;
 mod tests {
     use std::{fs, io};
 
-    use super::{migrate_legacy_asset_dir, migrate_legacy_asset_dir_with_rename};
+    use super::{
+        migrate_legacy_asset_dir, migrate_legacy_asset_dir_with_ops,
+        migrate_legacy_asset_dir_with_rename, migration_temp_dir,
+    };
 
     #[test]
     fn moves_legacy_data_when_new_directory_does_not_exist() {
@@ -226,5 +285,49 @@ mod tests {
 
         assert!(new_dir.is_dir());
         assert!(legacy_dir.is_dir());
+    }
+
+    #[test]
+    fn returns_genuine_rename_errors() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let legacy_dir = temp_dir.path().join("vibe-kanban");
+        let new_dir = temp_dir.path().join("agent-deck");
+        fs::create_dir(&legacy_dir).unwrap();
+
+        let error = migrate_legacy_asset_dir_with_rename(&legacy_dir, &new_dir, |_, _| {
+            Err(io::Error::new(io::ErrorKind::PermissionDenied, "blocked"))
+        })
+        .unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        assert!(legacy_dir.is_dir());
+        assert!(!new_dir.exists());
+    }
+
+    #[test]
+    fn interrupted_cross_device_copy_leaves_no_usable_destination() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let legacy_dir = temp_dir.path().join("vibe-kanban");
+        let new_dir = temp_dir.path().join("agent-deck");
+        let temp_migration_dir = migration_temp_dir(temp_dir.path(), &new_dir);
+        fs::create_dir(&legacy_dir).unwrap();
+        fs::write(legacy_dir.join("db.v2.sqlite"), "existing data").unwrap();
+
+        let error = migrate_legacy_asset_dir_with_ops(
+            &legacy_dir,
+            &new_dir,
+            |_, _| Err(io::Error::from(io::ErrorKind::CrossesDevices)),
+            |_, destination| {
+                fs::create_dir_all(destination)?;
+                fs::write(destination.join("db.v2.sqlite"), "partial")?;
+                Err(io::Error::new(io::ErrorKind::Interrupted, "copy stopped"))
+            },
+        )
+        .unwrap_err();
+
+        assert_eq!(error.kind(), io::ErrorKind::Interrupted);
+        assert!(legacy_dir.is_dir());
+        assert!(!new_dir.exists());
+        assert!(!temp_migration_dir.exists());
     }
 }

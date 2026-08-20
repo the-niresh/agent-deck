@@ -415,8 +415,9 @@ async fn open_execution_log_lines(
 
     if cfg!(debug_assertions) {
         // Convenience for local development with a clone of a prod db. Read only access to prod logs.
-        let prod_path =
-            process_log_file_path_in_root(&prod_asset_dir_path(), session_id, execution_id);
+        let prod_asset_dir = prod_asset_dir_path()
+            .with_context(|| "resolve production asset directory for execution logs")?;
+        let prod_path = process_log_file_path_in_root(&prod_asset_dir, session_id, execution_id);
         match File::open(&prod_path).await {
             Ok(file) => return Ok(Some(BufReader::new(file))),
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
@@ -565,8 +566,10 @@ async fn read_execution_logs_for_execution(
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             if cfg!(debug_assertions) {
                 // Convenience for local development with a clone of a prod db. Read only access to prod logs.
+                let prod_asset_dir = prod_asset_dir_path()
+                    .with_context(|| "resolve production asset directory for execution logs")?;
                 let prod_path =
-                    process_log_file_path_in_root(&prod_asset_dir_path(), session_id, execution_id);
+                    process_log_file_path_in_root(&prod_asset_dir, session_id, execution_id);
                 match read_execution_log_file(&prod_path).await {
                     Ok(contents) => return Ok(Some(contents)),
                     Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
