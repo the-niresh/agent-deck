@@ -96,8 +96,9 @@ agent-deck-cloud/
 Caddyfile
 Caddyfile.dev
 
-# Local scratch repos created by workspaces in the repo root
-/[lv]*/
+# Local scratch repo in the repository root. Workspace creation does not expose
+# a dedicated scratch-root setting yet, so keep this explicit until it does.
+/luluuuu/
 
 # Plans and specs live on disk, not in the repo
 # Backup: Obsidian vault Topics/Agent-Deck-Plans/
