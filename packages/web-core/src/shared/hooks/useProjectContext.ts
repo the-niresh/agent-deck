@@ -60,6 +60,8 @@ export interface ProjectContextValue {
   isLoading: boolean;
   error: SyncError | null;
   retry: () => void;
+  isSyncDegraded: boolean;
+  syncDegradedSince: number | null;
 
   // Issue mutations
   insertIssue: (data: CreateIssueRequest) => InsertResult<Issue>;
