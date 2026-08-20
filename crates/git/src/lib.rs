@@ -242,8 +242,9 @@ impl GitService {
         let has_email = cfg.get_string("user.email").is_ok();
         if !(has_name && has_email) {
             let mut cfg = repo.config()?;
-            cfg.set_str("user.name", "Agent Deck")?;
-            cfg.set_str("user.email", "89511644+the-niresh@users.noreply.github.com")?;
+            let (name, email) = fallback_commit_identity();
+            cfg.set_str("user.name", &name)?;
+            cfg.set_str("user.email", &email)?;
         }
         Ok(())
     }
@@ -256,8 +257,8 @@ impl GitService {
         match repo.signature() {
             Ok(sig) => Ok(sig),
             Err(_) => {
-                git2::Signature::now("Agent Deck", "89511644+the-niresh@users.noreply.github.com")
-                    .map_err(GitServiceError::from)
+                let (name, email) = fallback_commit_identity();
+                git2::Signature::now(&name, &email).map_err(GitServiceError::from)
             }
         }
     }
@@ -1778,6 +1779,14 @@ impl GitService {
 
         Ok(stats)
     }
+}
+
+fn fallback_commit_identity() -> (String, String) {
+    (
+        std::env::var("AGENT_DECK_GIT_FALLBACK_NAME").unwrap_or_else(|_| "Agent Deck".to_string()),
+        std::env::var("AGENT_DECK_GIT_FALLBACK_EMAIL")
+            .unwrap_or_else(|_| "89511644+the-niresh@users.noreply.github.com".to_string()),
+    )
 }
 
 /// Compute addition/deletion counts between two text snapshots using libgit2.

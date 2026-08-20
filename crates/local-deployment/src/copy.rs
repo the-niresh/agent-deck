@@ -216,7 +216,10 @@ mod tests {
         let outside_file = outside_dir.path().join("secret.txt");
         fs::write(&outside_file, "secret").unwrap();
 
-        let pattern = format!("../{}/secret.txt", outside_dir.path().file_name().unwrap().to_string_lossy());
+        let pattern = format!(
+            "../{}/secret.txt",
+            outside_dir.path().file_name().unwrap().to_string_lossy()
+        );
         let result = copy_project_files_impl(source_dir.path(), target_dir.path(), &pattern);
 
         assert!(result.is_ok());

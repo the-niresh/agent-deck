@@ -178,8 +178,8 @@ describe('SyncDegradedIndicator', () => {
     await flushEffects();
     expect(container.textContent).not.toContain('Data is not live');
     root.unmount();
-    expect(subscribe).toHaveBeenCalledTimes(2);
-    expect(unsubscribe).toHaveBeenCalledTimes(2);
+    expect(subscribe).toHaveBeenCalledTimes(10);
+    expect(unsubscribe).toHaveBeenCalledTimes(10);
     expect(rig.cleanup).toHaveBeenCalled();
   });
 });

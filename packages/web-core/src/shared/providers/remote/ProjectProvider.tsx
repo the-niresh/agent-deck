@@ -93,6 +93,14 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
   const [degradedSources, setDegradedSources] = useState({
     issues: false,
     statuses: false,
+    tags: false,
+    issueAssignees: false,
+    issueFollowers: false,
+    issueTags: false,
+    issueRelationships: false,
+    pullRequests: false,
+    pullRequestIssues: false,
+    workspaces: false,
   });
   const [syncDegradedSince, setSyncDegradedSince] = useState<number | null>(
     null
@@ -116,14 +124,51 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
       'statuses',
       PROJECT_PROJECT_STATUSES_SHAPE
     );
+    const unsubscribeTags = subscribe('tags', PROJECT_TAGS_SHAPE);
+    const unsubscribeIssueAssignees = subscribe(
+      'issueAssignees',
+      PROJECT_ISSUE_ASSIGNEES_SHAPE
+    );
+    const unsubscribeIssueFollowers = subscribe(
+      'issueFollowers',
+      PROJECT_ISSUE_FOLLOWERS_SHAPE
+    );
+    const unsubscribeIssueTags = subscribe(
+      'issueTags',
+      PROJECT_ISSUE_TAGS_SHAPE
+    );
+    const unsubscribeIssueRelationships = subscribe(
+      'issueRelationships',
+      PROJECT_ISSUE_RELATIONSHIPS_SHAPE
+    );
+    const unsubscribePullRequests = subscribe(
+      'pullRequests',
+      PROJECT_PULL_REQUESTS_SHAPE
+    );
+    const unsubscribePullRequestIssues = subscribe(
+      'pullRequestIssues',
+      PROJECT_PULL_REQUEST_ISSUES_SHAPE
+    );
+    const unsubscribeWorkspaces = subscribe(
+      'workspaces',
+      PROJECT_WORKSPACES_SHAPE
+    );
 
     return () => {
       unsubscribeIssues();
       unsubscribeStatuses();
+      unsubscribeTags();
+      unsubscribeIssueAssignees();
+      unsubscribeIssueFollowers();
+      unsubscribeIssueTags();
+      unsubscribeIssueRelationships();
+      unsubscribePullRequests();
+      unsubscribePullRequestIssues();
+      unsubscribeWorkspaces();
     };
   }, [params]);
 
-  const isSyncDegraded = degradedSources.issues || degradedSources.statuses;
+  const isSyncDegraded = Object.values(degradedSources).some(Boolean);
 
   useEffect(() => {
     setSyncDegradedSince((current) => {
