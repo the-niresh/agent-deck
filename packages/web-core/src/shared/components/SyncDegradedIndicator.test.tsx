@@ -138,6 +138,9 @@ describe('SyncDegradedIndicator', () => {
       );
     });
     await flushEffects();
+    const liveRegion = container.querySelector('[role="status"]');
+    expect(liveRegion).not.toBeNull();
+    expect(liveRegion?.textContent).toBe('');
     const issueOptions = rig.shapeOptions.get('issues');
     expect(issueOptions).toBeDefined();
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
@@ -156,6 +159,7 @@ describe('SyncDegradedIndicator', () => {
     });
     await flushEffects();
     expect(container.textContent).toContain('Data is not live');
+    expect(container.textContent).toContain('less than a minute');
     await act(async () => {
       await vi.advanceTimersByTimeAsync(999);
     });
