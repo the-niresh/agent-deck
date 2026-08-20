@@ -216,8 +216,10 @@ async fn async_main(
         )
         .with(sentry_layer())
         .init();
-    std::panic::set_hook(Box::new(|panic| {
+    let previous_panic_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic| {
         tracing::error!(panic = %panic, "Unhandled panic");
+        previous_panic_hook(panic);
     }));
 
     // Create asset directory if it doesn't exist
@@ -408,6 +410,7 @@ fn read_port_from_env(name: &str) -> Option<u16> {
         .and_then(|value| match parse_port(&value) {
             Ok(port) => Some(port),
             Err(err) => {
+                eprintln!("Ignoring invalid {name} value '{value}': {err}");
                 tracing::warn!("Ignoring invalid {name} value '{value}': {err}");
                 None
             }
