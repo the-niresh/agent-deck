@@ -83,6 +83,7 @@ async function flushEffects() {
 describe('SyncDegradedIndicator', () => {
   let container: HTMLDivElement;
   let root: Root;
+  let rootMounted: boolean;
   beforeEach(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
     vi.resetModules();
@@ -96,9 +97,15 @@ describe('SyncDegradedIndicator', () => {
     container = document.createElement('div');
     document.body.append(container);
     root = createRoot(container);
+    rootMounted = true;
   });
-  afterEach(() => {
-    root.unmount();
+  afterEach(async () => {
+    if (rootMounted) {
+      await act(async () => {
+        root.unmount();
+      });
+      rootMounted = false;
+    }
     container.remove();
     vi.useRealTimers();
     vi.unstubAllGlobals();
@@ -115,10 +122,15 @@ describe('SyncDegradedIndicator', () => {
     const collections = await import('@/shared/lib/electric/collections');
     const subscribeToStatus = collections.subscribeToShapeSourceStatus;
     const unsubscribe = vi.fn();
+    const statusUpdates: Array<{ isDegraded: boolean; retryAttempt: number }> =
+      [];
     const subscribe = vi
       .spyOn(collections, 'subscribeToShapeSourceStatus')
-      .mockImplementation((...args) => {
-        const cleanup = subscribeToStatus(...args);
+      .mockImplementation((shape, params, listener) => {
+        const cleanup = subscribeToStatus(shape, params, (status) => {
+          statusUpdates.push(status);
+          listener(status);
+        });
         return () => {
           unsubscribe();
           cleanup();
@@ -169,6 +181,12 @@ describe('SyncDegradedIndicator', () => {
       await vi.advanceTimersByTimeAsync(1);
     });
     await flushEffects();
+    expect(statusUpdates).toContainEqual(
+      expect.objectContaining({
+        isDegraded: true,
+        retryAttempt: 1,
+      })
+    );
     expect(boardRenders).toBe(rendersWhileDegraded);
     await act(async () => {
       await (issueOptions?.fetchClient as (input: string) => Promise<Response>)(
@@ -177,7 +195,10 @@ describe('SyncDegradedIndicator', () => {
     });
     await flushEffects();
     expect(container.textContent).not.toContain('Data is not live');
-    root.unmount();
+    await act(async () => {
+      root.unmount();
+    });
+    rootMounted = false;
     expect(subscribe).toHaveBeenCalledTimes(10);
     expect(unsubscribe).toHaveBeenCalledTimes(10);
     expect(rig.cleanup).toHaveBeenCalled();
