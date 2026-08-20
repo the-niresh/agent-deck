@@ -49,7 +49,7 @@
       "name": "Agent Deck",
       "description": "Create, update and delete Agent Deck tasks",
       "url": "https://github.com/the-niresh/agent-deck",
-      "icon": "favicon-vk-light.svg"
+      "icon": "agent-deck-icon-light.svg"
     },
     "context7": {
       "name": "Context7",
@@ -83,4 +83,3 @@
     }
   }
 }
-
