@@ -506,7 +506,7 @@ impl LocalContainerService {
                     // Executor signaled completion: kill group and use the provided result
                     if let Some(child_lock) = child_store.read().await.get(&exec_id).cloned() {
                         let mut child = child_lock.write().await ;
-                        if let Err(err) = command::kill_process_group(&mut child).await {
+                        if let Err(err) = command::kill_process_group(&mut child, exec_id).await {
                             tracing::error!("Failed to kill process group after exit signal: {} {}", exec_id, err);
                         }
                     }
@@ -1319,87 +1319,93 @@ impl ContainerService for LocalContainerService {
         execution_process: &ExecutionProcess,
         executor_action: &ExecutorAction,
     ) -> Result<(), ContainerError> {
-        // Get the worktree path
-        let container_ref = workspace
-            .container_ref
-            .as_ref()
-            .ok_or(ContainerError::Other(anyhow!(
-                "Container ref not found for workspace"
-            )))?;
-        let current_dir = PathBuf::from(container_ref);
+        let run_span = execution_run_span(execution_process.id);
+        async {
+            // Get the worktree path
+            let container_ref = workspace
+                .container_ref
+                .as_ref()
+                .ok_or(ContainerError::Other(anyhow!(
+                    "Container ref not found for workspace"
+                )))?;
+            let current_dir = PathBuf::from(container_ref);
 
-        let approvals_service: Arc<dyn ExecutorApprovalService> =
-            match executor_action.base_executor() {
-                Some(
-                    BaseCodingAgent::Codex
-                    | BaseCodingAgent::ClaudeCode
-                    | BaseCodingAgent::Gemini
-                    | BaseCodingAgent::QwenCode
-                    | BaseCodingAgent::Opencode,
-                ) => ExecutorApprovalBridge::new(
-                    self.approvals.clone(),
-                    self.db.clone(),
-                    self.notification_service.clone(),
-                    execution_process.id,
-                ),
-                _ => Arc::new(NoopExecutorApprovalService {}),
-            };
+            let approvals_service: Arc<dyn ExecutorApprovalService> =
+                match executor_action.base_executor() {
+                    Some(
+                        BaseCodingAgent::Codex
+                        | BaseCodingAgent::ClaudeCode
+                        | BaseCodingAgent::Gemini
+                        | BaseCodingAgent::QwenCode
+                        | BaseCodingAgent::Opencode,
+                    ) => ExecutorApprovalBridge::new(
+                        self.approvals.clone(),
+                        self.db.clone(),
+                        self.notification_service.clone(),
+                        execution_process.id,
+                    ),
+                    _ => Arc::new(NoopExecutorApprovalService {}),
+                };
 
-        let repos = WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id).await?;
-        let repo_names: Vec<String> = repos.iter().map(|r| r.name.clone()).collect();
-        let repo_context = RepoContext::new(current_dir.clone(), repo_names);
+            let repos =
+                WorkspaceRepo::find_repos_for_workspace(&self.db.pool, workspace.id).await?;
+            let repo_names: Vec<String> = repos.iter().map(|r| r.name.clone()).collect();
+            let repo_context = RepoContext::new(current_dir.clone(), repo_names);
 
-        let config = self.config.read().await;
-        let commit_reminder_enabled = config.commit_reminder_enabled;
-        let commit_reminder_prompt = config
-            .commit_reminder_prompt
-            .clone()
-            .unwrap_or_else(|| DEFAULT_COMMIT_REMINDER_PROMPT.to_string());
-        drop(config);
-        let mut env = ExecutionEnv::new(
-            repo_context,
-            commit_reminder_enabled,
-            commit_reminder_prompt,
-        );
+            let config = self.config.read().await;
+            let commit_reminder_enabled = config.commit_reminder_enabled;
+            let commit_reminder_prompt = config
+                .commit_reminder_prompt
+                .clone()
+                .unwrap_or_else(|| DEFAULT_COMMIT_REMINDER_PROMPT.to_string());
+            drop(config);
+            let mut env = ExecutionEnv::new(
+                repo_context,
+                commit_reminder_enabled,
+                commit_reminder_prompt,
+            );
 
-        // Always inject workspace/session context
-        env.insert("VK_WORKSPACE_ID", workspace.id.to_string());
-        env.insert("VK_WORKSPACE_BRANCH", &workspace.branch);
+            // Always inject workspace/session context
+            env.insert("VK_WORKSPACE_ID", workspace.id.to_string());
+            env.insert("VK_WORKSPACE_BRANCH", &workspace.branch);
 
-        // Create the child and stream, add to execution tracker with timeout
-        let mut spawned = tokio::time::timeout(
-            Duration::from_secs(30),
-            executor_action.spawn(&current_dir, approvals_service, &env),
-        )
-        .await
-        .map_err(|_| {
-            ContainerError::Other(anyhow!(
-                "Timeout: process took more than 30 seconds to start"
-            ))
-        })??;
-
-        if let Err(e) = self
-            .track_child_msgs_in_store(execution_process.id, &mut spawned.child)
+            // Create the child and stream, add to execution tracker with timeout
+            let mut spawned = tokio::time::timeout(
+                Duration::from_secs(30),
+                executor_action.spawn(&current_dir, approvals_service, &env),
+            )
             .await
-        {
-            let _ = command::kill_process_group(&mut spawned.child).await;
-            return Err(e);
-        }
+            .map_err(|_| {
+                ContainerError::Other(anyhow!(
+                    "Timeout: process took more than 30 seconds to start"
+                ))
+            })??;
 
-        self.add_child_to_store(execution_process.id, spawned.child)
-            .await;
+            if let Err(e) = self
+                .track_child_msgs_in_store(execution_process.id, &mut spawned.child)
+                .await
+            {
+                let _ = command::kill_process_group(&mut spawned.child, execution_process.id).await;
+                return Err(e);
+            }
 
-        // Store cancellation token for graceful shutdown
-        if let Some(cancel) = spawned.cancel {
-            self.add_cancellation_token(execution_process.id, cancel)
+            self.add_child_to_store(execution_process.id, spawned.child)
                 .await;
+
+            // Store cancellation token for graceful shutdown
+            if let Some(cancel) = spawned.cancel {
+                self.add_cancellation_token(execution_process.id, cancel)
+                    .await;
+            }
+
+            // Spawn unified exit monitor: watches OS exit and optional executor signal
+            let hn = self.spawn_exit_monitor(&execution_process.id, spawned.exit_signal);
+            self.add_exit_monitor_handle(execution_process.id, hn).await;
+
+            Ok(())
         }
-
-        // Spawn unified exit monitor: watches OS exit and optional executor signal
-        let hn = self.spawn_exit_monitor(&execution_process.id, spawned.exit_signal);
-        self.add_exit_monitor_handle(execution_process.id, hn).await;
-
-        Ok(())
+        .instrument(run_span)
+        .await
     }
 
     async fn stop_execution(
@@ -1407,6 +1413,8 @@ impl ContainerService for LocalContainerService {
         execution_process: &ExecutionProcess,
         status: ExecutionProcessStatus,
     ) -> Result<(), ContainerError> {
+        let run_span = execution_run_span(execution_process.id);
+        async {
         let child = self
             .get_child_from_store(&execution_process.id)
             .await
@@ -1431,12 +1439,15 @@ impl ContainerService for LocalContainerService {
             {
                 match tokio::time::timeout(Duration::from_secs(5), monitor_handle).await {
                     Ok(_) => {
-                        tracing::debug!("Process {} exited gracefully", execution_process.id);
+                        tracing::debug!(
+                            execution_process_id = %execution_process.id,
+                            "Process exited gracefully"
+                        );
                     }
                     Err(_) => {
                         tracing::debug!(
-                            "Graceful shutdown timed out for process {}, force killing",
-                            execution_process.id
+                            execution_process_id = %execution_process.id,
+                            "Graceful shutdown timed out, force killing"
                         );
                     }
                 }
@@ -1445,11 +1456,11 @@ impl ContainerService for LocalContainerService {
 
         {
             let mut child_guard = child.write().await;
-            if let Err(e) = command::kill_process_group(&mut child_guard).await {
+            if let Err(e) = command::kill_process_group(&mut child_guard, execution_process.id).await {
                 tracing::error!(
-                    "Failed to stop execution process {}: {}",
-                    execution_process.id,
-                    e
+                    execution_process_id = %execution_process.id,
+                    error = %e,
+                    "Failed to stop execution process"
                 );
                 return Err(e);
             }
@@ -1465,15 +1476,15 @@ impl ContainerService for LocalContainerService {
             let _ = tokio::time::timeout(Duration::from_secs(5), handle).await;
         }
 
-        tracing::debug!(
-            "Execution process {} stopped successfully",
-            execution_process.id
-        );
+        tracing::debug!(execution_process_id = %execution_process.id, "Execution process stopped successfully");
 
         // Record after-head commit OID (best-effort)
         self.update_after_head_commits(execution_process.id).await;
 
         Ok(())
+        }
+        .instrument(run_span)
+        .await
     }
 
     async fn stream_diff(

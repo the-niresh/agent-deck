@@ -1,8 +1,12 @@
 use command_group::AsyncGroupChild;
 #[cfg(unix)]
 use tokio::time::Duration;
+use uuid::Uuid;
 
-pub async fn kill_process_group(child: &mut AsyncGroupChild) -> std::io::Result<()> {
+pub async fn kill_process_group(
+    child: &mut AsyncGroupChild,
+    run_id: Option<Uuid>,
+) -> std::io::Result<()> {
     #[cfg(unix)]
     {
         // Use command_group's UnixChildExt::signal() which calls killpg()
@@ -11,13 +15,21 @@ pub async fn kill_process_group(child: &mut AsyncGroupChild) -> std::io::Result<
         use command_group::{Signal, UnixChildExt};
 
         for sig in [Signal::SIGINT, Signal::SIGTERM, Signal::SIGKILL] {
-            tracing::info!("Sending {:?} to process group", sig);
+            if let Some(run_id) = run_id {
+                tracing::info!(run_id = %run_id, "Sending {:?} to process group", sig);
+            } else {
+                tracing::info!("Sending {:?} to process group", sig);
+            }
             if let Err(e) = child.signal(sig) {
                 // break if the group does not exist anymore
                 if e.raw_os_error() == Some(nix::libc::ESRCH) {
                     break;
                 }
-                tracing::warn!("Failed to send signal {:?} to process group: {}", sig, e);
+                if let Some(run_id) = run_id {
+                    tracing::warn!(run_id = %run_id, "Failed to send signal {:?} to process group: {}", sig, e);
+                } else {
+                    tracing::warn!("Failed to send signal {:?} to process group: {}", sig, e);
+                }
             }
             if sig != Signal::SIGKILL {
                 tokio::time::sleep(Duration::from_secs(2)).await;

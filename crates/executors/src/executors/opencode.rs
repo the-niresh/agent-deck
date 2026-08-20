@@ -79,7 +79,7 @@ impl Drop for OpencodeServer {
         // kill the process properly using the kill helper as the native kill_on_drop doesn't work reliably causing orphaned processes and memory leaks
         if let Some(mut child) = self.child.take() {
             tokio::spawn(async move {
-                let _ = workspace_utils::process::kill_process_group(&mut child).await;
+                let _ = workspace_utils::process::kill_process_group(&mut child, None).await;
             });
         }
     }
