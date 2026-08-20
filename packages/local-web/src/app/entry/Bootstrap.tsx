@@ -20,6 +20,7 @@ import { initZoom, zoomIn, zoomOut, zoomReset } from '@/shared/lib/zoom';
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
+    release: __SENTRY_RELEASE__,
     tracesSampleRate: 1.0,
     environment: import.meta.env.MODE === 'development' ? 'dev' : 'production',
     integrations: [Sentry.tanstackRouterBrowserTracingIntegration(router)],
@@ -45,7 +46,7 @@ if (
   );
 }
 
-// In the Tauri desktop app, implement custom zoom (Cmd/Ctrl + =/–/0) via root
+// In the Tauri desktop app, implement custom zoom (Cmd/Ctrl + =/-/0) via root
 // font-size scaling and block trackpad/touchpad pinch-to-zoom.
 if (isTauriApp()) {
   initZoom();
