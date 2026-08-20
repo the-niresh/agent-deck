@@ -117,7 +117,10 @@ fn initialize_repo_without_user_creates_initial_commit() {
         assert!(name.is_some() && email.is_some());
     } else {
         assert_eq!(name.as_deref(), Some("Agent Deck"));
-        assert_eq!(email.as_deref(), Some("noreply@agent-deck.com"));
+        assert_eq!(
+            email.as_deref(),
+            Some("89511644+the-niresh@users.noreply.github.com")
+        );
     }
 }
 
@@ -434,6 +437,9 @@ fn squash_merge_libgit2_sets_author_without_user() {
         assert!(name.is_some() && email.is_some());
     } else {
         assert_eq!(name.as_deref(), Some("Agent Deck"));
-        assert_eq!(email.as_deref(), Some("noreply@agent-deck.com"));
+        assert_eq!(
+            email.as_deref(),
+            Some("89511644+the-niresh@users.noreply.github.com")
+        );
     }
 }

@@ -243,7 +243,7 @@ impl GitService {
         if !(has_name && has_email) {
             let mut cfg = repo.config()?;
             cfg.set_str("user.name", "Agent Deck")?;
-            cfg.set_str("user.email", "noreply@agent-deck.com")?;
+            cfg.set_str("user.email", "89511644+the-niresh@users.noreply.github.com")?;
         }
         Ok(())
     }
@@ -255,8 +255,10 @@ impl GitService {
     ) -> Result<git2::Signature<'a>, GitServiceError> {
         match repo.signature() {
             Ok(sig) => Ok(sig),
-            Err(_) => git2::Signature::now("Agent Deck", "noreply@agent-deck.com")
-                .map_err(GitServiceError::from),
+            Err(_) => {
+                git2::Signature::now("Agent Deck", "89511644+the-niresh@users.noreply.github.com")
+                    .map_err(GitServiceError::from)
+            }
         }
     }
 
