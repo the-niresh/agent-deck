@@ -1360,6 +1360,7 @@ impl ContainerService for LocalContainerService {
                 .unwrap_or_else(|| DEFAULT_COMMIT_REMINDER_PROMPT.to_string());
             drop(config);
             let mut env = ExecutionEnv::new(
+                execution_process.id,
                 repo_context,
                 commit_reminder_enabled,
                 commit_reminder_prompt,

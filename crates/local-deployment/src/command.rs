@@ -6,7 +6,7 @@ pub(crate) async fn kill_process_group(
     child: &mut AsyncGroupChild,
     run_id: Uuid,
 ) -> Result<(), ContainerError> {
-    utils::process::kill_process_group(child, Some(run_id))
+    utils::process::kill_process_group(child, run_id)
         .await
         .map_err(ContainerError::KillFailed)
 }

@@ -2,6 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use git::GitService;
 use tokio::process::Command;
+use uuid::Uuid;
 
 use crate::command::CmdOverrides;
 
@@ -77,6 +78,7 @@ impl RepoContext {
 /// Environment variables to inject into executor processes
 #[derive(Debug, Clone)]
 pub struct ExecutionEnv {
+    pub run_id: Uuid,
     pub vars: HashMap<String, String>,
     pub repo_context: RepoContext,
     pub commit_reminder: bool,
@@ -85,11 +87,13 @@ pub struct ExecutionEnv {
 
 impl ExecutionEnv {
     pub fn new(
+        run_id: Uuid,
         repo_context: RepoContext,
         commit_reminder: bool,
         commit_reminder_prompt: String,
     ) -> Self {
         Self {
+            run_id,
             vars: HashMap::new(),
             repo_context,
             commit_reminder,
@@ -145,7 +149,8 @@ mod tests {
 
     #[test]
     fn profile_overrides_runtime_env() {
-        let mut base = ExecutionEnv::new(RepoContext::default(), false, String::new());
+        let mut base =
+            ExecutionEnv::new(Uuid::new_v4(), RepoContext::default(), false, String::new());
         base.insert("VK_PROJECT_NAME", "runtime");
         base.insert("FOO", "runtime");
 

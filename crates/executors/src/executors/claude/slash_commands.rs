@@ -229,9 +229,14 @@ impl ClaudeCode {
             .current_dir(current_dir)
             .args(&args);
 
-        ExecutionEnv::new(RepoContext::default(), false, String::new())
-            .with_profile(&self.cmd)
-            .apply_to_command(&mut command);
+        ExecutionEnv::new(
+            uuid::Uuid::new_v4(),
+            RepoContext::default(),
+            false,
+            String::new(),
+        )
+        .with_profile(&self.cmd)
+        .apply_to_command(&mut command);
 
         if self.disable_api_key.unwrap_or(false) {
             command.env_remove("ANTHROPIC_API_KEY");
