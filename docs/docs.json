@@ -155,12 +155,6 @@
       "vscode"
     ]
   },
-  "integrations": {
-    "posthog": {
-      "apiKey": "phc_V5XpxUvgOfEWk38iGHr0Kve2oZTmWFjDe3mIwTCXzx0",
-      "apiHost": "https://eu.i.posthog.com"
-    }
-  },
   "redirects": [
     {
       "source": "/workspaces/preview",
