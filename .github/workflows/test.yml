@@ -240,11 +240,6 @@ jobs:
           setup-node: 'true'
           setup-sqlx-cli: 'true'
 
-      - name: Setup SSH Agent for private dependencies
-        uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.VK_PRIVATE_DEPLOY_KEY }}
-
       - name: Check remote Cargo.lock is consistent
         run: |
           cargo metadata --locked --format-version 1 --manifest-path crates/remote/Cargo.toml > /dev/null
