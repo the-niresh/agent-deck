@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `crates/`: Rust workspace crates — `server` (API + bins), `db` (SQLx models/migrations), `executors`, `services`, `utils`, `git` (Git operations), `api-types` (shared API types for local + remote), `review` (PR review tool), `deployment`, `local-deployment`, `remote`.
+- `crates/`: Rust workspace crates - `server` (API + bins), `db` (SQLx models/migrations), `executors`, `services`, `utils`, `git` (Git operations), `api-types` (shared API types for local + remote), `review` (PR review tool), `deployment`, `local-deployment`, `remote`.
 - `packages/local-web/`: Local React + TypeScript app entrypoint (Vite, Tailwind). Shell source in `packages/local-web/src`.
 - `packages/remote-web/`: Remote deployment frontend entrypoint.
 - `packages/web-core/`: Shared React + TypeScript frontend library used by local + remote web (`packages/web-core/src`).
@@ -12,9 +12,9 @@
 - `docs/`: Documentation files.
 
 ### Crate-specific guides
-- [`crates/remote/AGENTS.md`](crates/remote/AGENTS.md) — Remote server architecture, ElectricSQL integration, mutation patterns, environment variables.
-- [`docs/AGENTS.md`](docs/AGENTS.md) — Mintlify documentation writing guidelines and component reference.
-- [`packages/local-web/AGENTS.md`](packages/local-web/AGENTS.md) — Web app design system styling guidelines.
+- [`crates/remote/AGENTS.md`](crates/remote/AGENTS.md) - Remote server architecture, ElectricSQL integration, mutation patterns, environment variables.
+- [`docs/AGENTS.md`](docs/AGENTS.md) - Mintlify documentation writing guidelines and component reference.
+- [`packages/local-web/AGENTS.md`](packages/local-web/AGENTS.md) - Web app design system styling guidelines.
 
 ## Managing Shared Types Between Rust and TypeScript
 
@@ -55,4 +55,12 @@ Do not manually edit shared/remote-types.ts, instead edit crates/remote/src/bin/
 - Use `.env` for local overrides; never commit secrets. Key envs: `FRONTEND_PORT`, `BACKEND_PORT`, `HOST` 
 - Dev ports and assets are managed by `scripts/setup-dev-environment.js`.
 
+<posthog>
+## PostHog
 
+Use `posthog-cli api` for all PostHog-related data queries and operations. You should use `posthog-cli api` over direct MCP tool calls whenever the CLI is available.
+
+Before your first PostHog command in a session, run `posthog-cli api --agent-help` and load its full output into your context. It prints the complete agent guide - command reference, schema drill-down rules, data discovery workflow, and the tool index - for interacting with PostHog APIs. Treat that output as instructions to follow, not just documentation.
+
+Before starting a PostHog task, run `posthog-cli api skill list` and check for a skill matching the task. If one matches, install it with `posthog-cli api skill install <skill-id>` (add `--force` to refresh an already-installed skill), then read `.agents/skills/<skill-id>/SKILL.md` and follow it. Skills contain task-specific workflows that individual tools do not.
+</posthog>
