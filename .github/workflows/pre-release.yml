@@ -52,13 +52,6 @@ jobs:
       - name: setup node
         uses: ./.github/actions/setup-node
 
-      - name: Setup SSH Agent for private dependencies
-        id: ssh-setup
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-        uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.VK_PRIVATE_DEPLOY_KEY }}
-
       - name: Generate branch suffix
         id: branch
         run: |
@@ -137,15 +130,10 @@ jobs:
           echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
 
       - name: Update remote crate lockfile
-        if: ${{ steps.ssh-setup.outcome == 'success' }}
         run: cargo metadata --format-version 1 --manifest-path crates/remote/Cargo.toml > /dev/null
 
       - name: Update relay-tunnel crate lockfile
         run: cargo metadata --format-version 1 --manifest-path crates/relay-tunnel/Cargo.toml > /dev/null
-
-      - name: Stop SSH agent
-        if: ${{ steps.ssh-setup.outcome == 'success' }}
-        run: ssh-agent -k
 
       - name: Commit changes and create tag
         run: |

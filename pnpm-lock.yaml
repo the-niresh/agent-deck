@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  seroval: ^1.5.3
+
 patchedDependencies:
   '@pierre/diffs@1.1.4':
     hash: 3b027916da397786106600ebb33b5c5e47cb57d2f03840500a882a8d96dacb8d
@@ -4871,10 +4874,10 @@ packages:
     resolution: {integrity: sha512-EAHqADIQondwRZIdeW2I636zgsODzoBDwb3PT/+7TLDWyw1Dy/Xv7iGUIEXXav7usHDE9HVhOU61irI3EnyyHA==}
     engines: {node: '>=10'}
     peerDependencies:
-      seroval: ^1.0
+      seroval: ^1.5.3
 
-  seroval@1.5.0:
-    resolution: {integrity: sha512-OE4cvmJ1uSPrKorFIH9/w/Qwuvi/IMcGbv5RKgcJ/zjA/IohDLU6SVaxFN9FwajbP7nsX0dQqMDes1whk3y+yw==}
+  seroval@1.6.2:
+    resolution: {integrity: sha512-mPT+SD2TrlB6wvte1KkYOYUkubaTbd6pZ/6Kk3C9nxzrHmCZyhxOO7XGAeL7f+yLKZglzGtM9odUVvg/EhO+vQ==}
     engines: {node: '>=10'}
 
   shebang-command@2.0.0:
@@ -7315,8 +7318,8 @@ snapshots:
       '@tanstack/history': 1.154.14
       '@tanstack/store': 0.8.1
       cookie-es: 2.0.0
-      seroval: 1.5.0
-      seroval-plugins: 1.5.0(seroval@1.5.0)
+      seroval: 1.6.2
+      seroval-plugins: 1.5.0(seroval@1.6.2)
       tiny-invariant: 1.3.3
       tiny-warning: 1.0.3
 
@@ -10018,11 +10021,11 @@ snapshots:
 
   semver@7.7.2: {}
 
-  seroval-plugins@1.5.0(seroval@1.5.0):
+  seroval-plugins@1.5.0(seroval@1.6.2):
     dependencies:
-      seroval: 1.5.0
+      seroval: 1.6.2
 
-  seroval@1.5.0: {}
+  seroval@1.6.2: {}
 
   shebang-command@2.0.0:
     dependencies:
