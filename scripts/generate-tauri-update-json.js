@@ -7,7 +7,7 @@
 //     --version 0.2.0 \
 //     --notes "Bug fixes" \
 //     --artifacts-dir ./tauri-artifacts \
-//     --download-base "https://github.com/BloopAI/agent-deck/releases/download/v0.2.0" \
+//     --download-base "https://github.com/the-niresh/agent-deck/releases/download/v0.2.0" \
 //     --output latest.json
 //
 // The artifacts-dir should contain Tauri bundle outputs with .sig files:

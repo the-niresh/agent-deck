@@ -134,7 +134,7 @@
     "links": [
       {
         "label": "GitHub",
-        "href": "https://github.com/BloopAI/agent-deck"
+        "href": "https://github.com/the-niresh/agent-deck"
       }
     ],
     "primary": {
@@ -167,7 +167,7 @@
   ],
   "footer": {
     "socials": {
-      "github": "https://github.com/BloopAI/agent-deck",
+      "github": "https://github.com/the-niresh/agent-deck",
       "x": "https://x.com/agent-deck"
     }
   }

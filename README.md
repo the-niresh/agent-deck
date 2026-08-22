@@ -10,9 +10,9 @@
 
 <p align="center">Self-hosted kanban for coding agents. Plan work on a board, let agents run it in isolated workspaces, review the diff before anything is pushed.</p>
 
-> **agent-deck** — a self-hosted fork of [BloopAI/agent-deck](https://github.com/BloopAI/agent-deck),
+> **agent-deck** — a self-hosted fork of [BloopAI/vibe-kanban](https://github.com/BloopAI/vibe-kanban),
 > maintained independently. Upstream was sunset with its last commit on 2026-04-24 and its
-> hosted cloud is gone, so links to `agent-deck.com`, upstream Discussions, and Discord have
+> hosted cloud is gone, so links to `vibekanban.com`, upstream Discussions, and Discord have
 > been removed rather than left to rot.
 >
 > **What this fork changes:**
@@ -45,16 +45,9 @@ agent-deck is built for this. Use kanban issues to plan work, either privately o
 
 ![](packages/public/agent-deck-screenshot-workspace.png)
 
-One command. Describe the work, review the diff, ship it.
-
-```bash
-npx agent-deck
-```
-
-
 ## Installation
 
-> `npx agent-deck` installs the **published upstream package**, which is pinned at the
+> `npx vibe-kanban` installs the **published upstream package**, which is pinned at the
 > sunset release and shows the export-only page. Build from this checkout instead.
 
 Authenticate your coding agent CLI first (`claude`, `codex`, `gemini`, …), then:
@@ -225,7 +218,7 @@ but that site is no longer maintained.)
 
 agent-deck is licensed under the [Apache License 2.0](LICENSE), inherited from upstream.
 
-This is a modified fork of [BloopAI/agent-deck](https://github.com/BloopAI/agent-deck).
+This is a modified fork of [BloopAI/vibe-kanban](https://github.com/BloopAI/vibe-kanban).
 Upstream's last commit was 2026-04-24; everything after that point in this repository is
 independent work. Changes made in this fork are summarised at the top of this README and
 recorded in full in `git log`.

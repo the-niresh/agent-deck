@@ -20,7 +20,7 @@ jobs:
         uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
         with:
           token: ${{ secrets.REMOTE_DEPLOYMENT_TOKEN }}
-          repository: BloopAI/agent-deck-remote-deployment
+          repository: BloopAI/vibe-kanban-remote-deployment
           event-type: agent-deck-remote-deploy-dev
           client-payload: |
             {

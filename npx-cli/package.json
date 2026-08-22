@@ -14,7 +14,7 @@
   "author": "bloop",
   "repository": {
     "type": "git",
-    "url": "https://github.com/BloopAI/agent-deck"
+    "url": "https://github.com/the-niresh/agent-deck"
   },
   "engines": {
     "node": ">=20.19.0"

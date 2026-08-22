@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use crate::DeploymentImpl;
 
 const CACHE_TTL: Duration = Duration::from_secs(15 * 60);
-const GITHUB_API_URL: &str = "https://api.github.com/repos/BloopAI/agent-deck/releases";
+const GITHUB_API_URL: &str = "https://api.github.com/repos/the-niresh/agent-deck/releases";
 
 type ReleasesCache = RwLock<Option<(Vec<GitHubRelease>, Instant)>>;
 
