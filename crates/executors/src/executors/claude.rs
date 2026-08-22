@@ -62,7 +62,7 @@ fn base_command(claude_code_router: bool) -> &'static str {
     if claude_code_router {
         "npx -y @musistudio/claude-code-router@1.0.66 code"
     } else {
-        "npx -y @anthropic-ai/claude-code@2.1.119"
+        "npx -y @anthropic-ai/claude-code@2.1.240"
     }
 }
 
@@ -336,6 +336,12 @@ impl StandardCodingAgentExecutor for ClaudeCode {
                 PermissionPolicy::Auto => {
                     self.plan = Some(false);
                     self.approvals = Some(false);
+                    // Auto means "do not stop to ask". Without this, `plan` and
+                    // `approvals` are both false, so spawn() wires neither the
+                    // stdio prompt tool nor a bypass mode, and the CLI falls back
+                    // to asking with nowhere to ask - every write then fails.
+                    // `get_preset_options` already maps this flag back to Auto.
+                    self.dangerously_skip_permissions = Some(true);
                 }
             }
         }
