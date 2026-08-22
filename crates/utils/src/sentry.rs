@@ -49,12 +49,10 @@ fn environment() -> Cow<'static, str> {
         .map(Cow::Borrowed)
         .or_else(|| std::env::var("SENTRY_ENVIRONMENT").ok().map(Cow::Owned))
         .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| {
-            if cfg!(debug_assertions) {
-                Cow::Borrowed("dev")
-            } else {
-                Cow::Borrowed("production")
-            }
+        .unwrap_or(if cfg!(debug_assertions) {
+            Cow::Borrowed("dev")
+        } else {
+            Cow::Borrowed("production")
         })
 }
 
