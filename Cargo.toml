@@ -27,6 +27,7 @@ members = [
     "crates/review",
     "crates/embedded-ssh",
     "crates/desktop-bridge",
+    "crates/tauri-app",
     "crates/preview-proxy",
     "crates/relay-tunnel-core",
     "crates/relay-webrtc",
