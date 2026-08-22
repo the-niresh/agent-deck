@@ -17,11 +17,29 @@ import { queryClient } from '@/shared/lib/queryClient';
 import { isTauriApp } from '@/shared/lib/platform';
 import { initZoom, zoomIn, zoomOut, zoomReset } from '@/shared/lib/zoom';
 
+const DEFAULT_TRACES_SAMPLE_RATE = 0.1;
+
+/**
+ * Out-of-range or unparseable values fall back to the default rather than
+ * throwing: this runs at module load, and a malformed env var must not stop the
+ * app from booting.
+ */
+function parseSampleRate(raw: string | undefined): number {
+  const parsed = Number(raw);
+  return raw !== undefined && Number.isFinite(parsed) && parsed >= 0 && parsed <= 1
+    ? parsed
+    : DEFAULT_TRACES_SAMPLE_RATE;
+}
+
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     release: __SENTRY_RELEASE__,
-    tracesSampleRate: 1.0,
+    // Kept in step with the Rust side's SENTRY_TRACES_SAMPLE_RATE. This was 1.0,
+    // which billed every page load and every router navigation as a transaction.
+    tracesSampleRate: parseSampleRate(
+      import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE
+    ),
     environment: import.meta.env.MODE === 'development' ? 'dev' : 'production',
     integrations: [Sentry.tanstackRouterBrowserTracingIntegration(router)],
   });

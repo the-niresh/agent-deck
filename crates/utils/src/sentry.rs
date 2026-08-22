@@ -46,6 +46,28 @@ impl SentrySource {
     }
 }
 
+/// Fraction of transactions sent to Sentry for performance monitoring.
+///
+/// Set explicitly rather than left to `ClientOptions::default()`, which is 0.0 -
+/// the backend used to send no performance data at all while the frontend sent
+/// 100%. Both sides now read the same env var name and share this default, so a
+/// library default is never the thing deciding the bill.
+///
+/// Out-of-range or unparseable values fall back to the default instead of
+/// failing: this runs during init, and a malformed env var must not stop the
+/// process from starting.
+fn traces_sample_rate() -> f32 {
+    parse_traces_sample_rate(std::env::var("SENTRY_TRACES_SAMPLE_RATE").ok().as_deref())
+}
+
+const DEFAULT_TRACES_SAMPLE_RATE: f32 = 0.1;
+
+fn parse_traces_sample_rate(raw: Option<&str>) -> f32 {
+    raw.and_then(|raw| raw.trim().parse::<f32>().ok())
+        .filter(|rate| (0.0..=1.0).contains(rate))
+        .unwrap_or(DEFAULT_TRACES_SAMPLE_RATE)
+}
+
 fn environment() -> Cow<'static, str> {
     option_env!("SENTRY_ENVIRONMENT")
         .map(Cow::Borrowed)
@@ -69,6 +91,7 @@ pub fn init_once(source: SentrySource) {
             sentry::ClientOptions {
                 release: sentry::release_name!(),
                 environment: Some(environment()),
+                traces_sample_rate: traces_sample_rate(),
                 before_send: Some(Arc::new(|event| Some(scrub_event(event)))),
                 ..Default::default()
             },
@@ -442,7 +465,26 @@ mod tests {
     use sentry::protocol::Event;
     use serde_json::{Value, json};
 
-    use super::{ContextCache, ScrubContext, scrub_event_with_context};
+    use super::{
+        ContextCache, DEFAULT_TRACES_SAMPLE_RATE, ScrubContext, parse_traces_sample_rate,
+        scrub_event_with_context,
+    };
+
+    #[test]
+    fn traces_sample_rate_falls_back_on_missing_or_bad_values() {
+        // Unset, unparseable, and out-of-range all fall back rather than panic:
+        // this runs during init and must never stop the process from starting.
+        for raw in [None, Some("banana"), Some(""), Some("-0.5"), Some("1.5")] {
+            assert_eq!(parse_traces_sample_rate(raw), DEFAULT_TRACES_SAMPLE_RATE);
+        }
+    }
+
+    #[test]
+    fn traces_sample_rate_accepts_the_valid_range_including_zero() {
+        assert_eq!(parse_traces_sample_rate(Some("0")), 0.0);
+        assert_eq!(parse_traces_sample_rate(Some("1")), 1.0);
+        assert_eq!(parse_traces_sample_rate(Some(" 0.25 ")), 0.25);
+    }
 
     #[test]
     fn scrub_event_removes_home_paths_and_tokens() {
