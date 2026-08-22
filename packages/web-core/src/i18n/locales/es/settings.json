@@ -144,7 +144,7 @@
         "description": "Configurar preferencias de nombres de ramas git",
         "branchPrefix": {
           "label": "Prefijo de Rama",
-          "placeholder": "vk",
+          "placeholder": "deck",
           "helper": "Prefijo para nombres de ramas generadas automáticamente. Dejar vacío para no usar prefijo.",
           "preview": "Vista previa:",
           "previewWithPrefix": "{{prefix}}/1a2b-nombre-tarea",

@@ -144,7 +144,7 @@
         "description": "Gitブランチ名の設定",
         "branchPrefix": {
           "label": "ブランチプレフィックス",
-          "placeholder": "vk",
+          "placeholder": "deck",
           "helper": "自動生成されるブランチ名のプレフィックス。空欄にするとプレフィックスなしになります。",
           "preview": "プレビュー：",
           "previewWithPrefix": "{{prefix}}/1a2b-タスク名",

@@ -144,7 +144,7 @@
         "description": "配置 git 分支命名偏好",
         "branchPrefix": {
           "label": "分支前缀",
-          "placeholder": "vk",
+          "placeholder": "deck",
           "helper": "自动生成的分支名称的前缀。留空表示无前缀。",
           "preview": "预览：",
           "previewWithPrefix": "{{prefix}}/1a2b-task-name",

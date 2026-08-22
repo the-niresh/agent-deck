@@ -152,7 +152,7 @@
         "description": "Configure git branch naming preferences",
         "branchPrefix": {
           "label": "Branch Prefix",
-          "placeholder": "vk",
+          "placeholder": "deck",
           "helper": "Prefix for auto-generated branch names. Leave empty for no prefix.",
           "preview": "Preview:",
           "previewWithPrefix": "{{prefix}}/1a2b-task-name",
