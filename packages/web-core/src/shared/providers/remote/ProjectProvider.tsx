@@ -1,5 +1,12 @@
-import { useMemo, useCallback, type ReactNode } from 'react';
+import {
+  useMemo,
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useShape } from '@/shared/integrations/electric/hooks';
+import { subscribeToShapeSourceStatus } from '@/shared/lib/electric/collections';
 import {
   PROJECT_ISSUES_SHAPE,
   PROJECT_PROJECT_STATUSES_SHAPE,
@@ -21,6 +28,7 @@ import {
   PULL_REQUEST_ISSUE_MUTATION,
   type Issue,
   type ProjectStatus,
+  type ShapeDefinition,
   type Tag,
 } from 'shared/remote-types';
 import {
@@ -82,6 +90,92 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
   // Board readiness depends on core kanban data only.
   // Other project-scoped shapes hydrate opportunistically after render.
   const isLoading = issuesResult.isLoading || statusesResult.isLoading;
+  const [degradedSources, setDegradedSources] = useState({
+    issues: false,
+    statuses: false,
+    tags: false,
+    issueAssignees: false,
+    issueFollowers: false,
+    issueTags: false,
+    issueRelationships: false,
+    pullRequests: false,
+    pullRequestIssues: false,
+    workspaces: false,
+  });
+  const [syncDegradedSince, setSyncDegradedSince] = useState<number | null>(
+    null
+  );
+
+  useEffect(() => {
+    const subscribe = (
+      key: keyof typeof degradedSources,
+      shape: Pick<ShapeDefinition<unknown>, 'table'>
+    ) =>
+      subscribeToShapeSourceStatus(shape, params, (status) => {
+        setDegradedSources((current) =>
+          current[key] === status.isDegraded
+            ? current
+            : { ...current, [key]: status.isDegraded }
+        );
+      });
+
+    const unsubscribeIssues = subscribe('issues', PROJECT_ISSUES_SHAPE);
+    const unsubscribeStatuses = subscribe(
+      'statuses',
+      PROJECT_PROJECT_STATUSES_SHAPE
+    );
+    const unsubscribeTags = subscribe('tags', PROJECT_TAGS_SHAPE);
+    const unsubscribeIssueAssignees = subscribe(
+      'issueAssignees',
+      PROJECT_ISSUE_ASSIGNEES_SHAPE
+    );
+    const unsubscribeIssueFollowers = subscribe(
+      'issueFollowers',
+      PROJECT_ISSUE_FOLLOWERS_SHAPE
+    );
+    const unsubscribeIssueTags = subscribe(
+      'issueTags',
+      PROJECT_ISSUE_TAGS_SHAPE
+    );
+    const unsubscribeIssueRelationships = subscribe(
+      'issueRelationships',
+      PROJECT_ISSUE_RELATIONSHIPS_SHAPE
+    );
+    const unsubscribePullRequests = subscribe(
+      'pullRequests',
+      PROJECT_PULL_REQUESTS_SHAPE
+    );
+    const unsubscribePullRequestIssues = subscribe(
+      'pullRequestIssues',
+      PROJECT_PULL_REQUEST_ISSUES_SHAPE
+    );
+    const unsubscribeWorkspaces = subscribe(
+      'workspaces',
+      PROJECT_WORKSPACES_SHAPE
+    );
+
+    return () => {
+      unsubscribeIssues();
+      unsubscribeStatuses();
+      unsubscribeTags();
+      unsubscribeIssueAssignees();
+      unsubscribeIssueFollowers();
+      unsubscribeIssueTags();
+      unsubscribeIssueRelationships();
+      unsubscribePullRequests();
+      unsubscribePullRequestIssues();
+      unsubscribeWorkspaces();
+    };
+  }, [params]);
+
+  const isSyncDegraded = Object.values(degradedSources).some(Boolean);
+
+  useEffect(() => {
+    setSyncDegradedSince((current) => {
+      if (isSyncDegraded) return current ?? Date.now();
+      return current === null ? current : null;
+    });
+  }, [isSyncDegraded]);
 
   // First error found
   const error =
@@ -244,6 +338,8 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
       isLoading,
       error,
       retry,
+      isSyncDegraded,
+      syncDegradedSince,
 
       // Issue mutations
       insertIssue: issuesResult.insert,
@@ -313,6 +409,8 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
       isLoading,
       error,
       retry,
+      isSyncDegraded,
+      syncDegradedSince,
       getIssue,
       getIssuesForStatus,
       getAssigneesForIssue,

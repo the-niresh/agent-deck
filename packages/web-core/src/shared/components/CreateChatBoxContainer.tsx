@@ -15,7 +15,7 @@ import {
   splitMessageToTitleDescription,
 } from '@/shared/lib/string';
 import type { BaseCodingAgent, Repo } from 'shared/types';
-import { CreateChatBox } from '@vibe/ui/components/CreateChatBox';
+import { CreateChatBox } from '@agent-deck/ui/components/CreateChatBox';
 import { SettingsDialog } from '@/shared/dialogs/settings/SettingsDialog';
 import { CreateModeRepoPickerBar } from './CreateModeRepoPickerBar';
 import { ModelSelectorContainer } from '@/shared/components/ModelSelectorContainer';

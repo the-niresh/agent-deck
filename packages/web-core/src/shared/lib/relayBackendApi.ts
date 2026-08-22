@@ -15,7 +15,8 @@ export interface RelaySigningSessionRefreshPayload {
   signature_b64: string;
 }
 
-const BUILD_TIME_API_BASE = import.meta.env.VITE_VK_SHARED_API_BASE || '';
+const BUILD_TIME_API_BASE =
+  import.meta.env.VITE_AGENT_DECK_SHARED_API_BASE || '';
 const BUILD_TIME_RELAY_API_BASE = import.meta.env.VITE_RELAY_API_BASE_URL || '';
 const USE_REMOTE_API_BASE_FALLBACK = !BUILD_TIME_RELAY_API_BASE;
 

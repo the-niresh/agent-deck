@@ -30,7 +30,7 @@ import { getIdeName } from '@/shared/lib/ideName';
 import { cn, playSound } from '@/shared/lib/utils';
 import { isTauriApp } from '@/shared/lib/platform';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
-import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
+import { PrimaryButton } from '@agent-deck/ui/components/PrimaryButton';
 
 type SoundOption = {
   value: SoundFile;
@@ -148,8 +148,8 @@ export function LandingPage() {
 
   const logoSrc =
     resolveTheme(theme) === 'dark'
-      ? '/vibe-kanban-logo-dark.svg'
-      : '/vibe-kanban-logo.svg';
+      ? '/agent-deck-logo-dark.svg'
+      : '/agent-deck-logo.svg';
 
   useEffect(() => {
     if (!config || initialized) return;
@@ -308,7 +308,7 @@ export function LandingPage() {
         {/* Header */}
         <header className="shrink-0 space-y-base p-double pb-base">
           <div className="flex items-center justify-between">
-            <img src={logoSrc} alt="Vibe Kanban" className="h-8 w-auto logo" />
+            <img src={logoSrc} alt="Agent Deck" className="h-8 w-auto logo" />
             <div className="flex flex-wrap items-center gap-2">
               {SOCIAL_LINKS.map((link) => (
                 <PrimaryButton
@@ -328,12 +328,12 @@ export function LandingPage() {
                 weight="fill"
               />
               <p className="text-sm text-normal">
-                Vibe Kanban runs AI coding agents with{' '}
+                Agent Deck runs AI coding agents with{' '}
                 <code>--dangerously-skip-permissions</code> /{' '}
                 <code>--yolo</code> by default. Always review what agents are
                 doing.{' '}
                 <a
-                  href="https://www.vibekanban.com/docs/getting-started#safety-notice"
+                  href="https://github.com/the-niresh/agent-deck"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-brand hover:underline"
@@ -523,7 +523,7 @@ export function LandingPage() {
           <p className="text-xs text-low">
             By continuing you agree to the{' '}
             <a
-              href="https://www.vibekanban.com/terms"
+              href="https://github.com/the-niresh/agent-deck"
               target="_blank"
               rel="noopener noreferrer"
               className="text-brand hover:underline"
@@ -532,7 +532,7 @@ export function LandingPage() {
             </a>{' '}
             and{' '}
             <a
-              href="https://www.vibekanban.com/privacy"
+              href="https://github.com/the-niresh/agent-deck"
               target="_blank"
               rel="noopener noreferrer"
               className="text-brand hover:underline"

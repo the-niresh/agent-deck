@@ -221,8 +221,8 @@
       const encoder = new TextEncoder();
       const decoder = new TextDecoder();
       const ED25519_ORDER = ed25519.CURVE.n;
-      const CLIENT_ID = encoder.encode("vibe-kanban-browser");
-      const SERVER_ID = encoder.encode("vibe-kanban-server");
+      const CLIENT_ID = encoder.encode("agent-deck-browser");
+      const SERVER_ID = encoder.encode("agent-deck-server");
       const CLIENT_PROOF_CONTEXT = encoder.encode("vk-spake2-client-proof-v2");
       const SERVER_PROOF_CONTEXT = encoder.encode("vk-spake2-server-proof-v2");
       const KEY_CONFIRMATION_INFO = encoder.encode("key-confirmation");

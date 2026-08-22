@@ -72,8 +72,8 @@ build-npm-package-codesign.sh
 
 npx-cli/bin/
 npx-cli/dist
-npx-cli/vibe-kanban-*
-vibe-kanban-*.tgz
+npx-cli/agent-deck-*
+agent-deck-*.tgz
 
 # Development ports file
 .dev-ports.json
@@ -82,7 +82,7 @@ dev_assets
 /packages/web/.env.sentry-build-plugin
 .ssh
 
-vibe-kanban-cloud/
+agent-deck-cloud/
 
 .jj
 .sisyphus/
@@ -96,5 +96,8 @@ vibe-kanban-cloud/
 Caddyfile
 Caddyfile.dev
 
-# Local scratch repos created by workspaces in the repo root
-/luluuuu/
+# Plans and specs live on disk, not in the repo
+# Backup: Obsidian vault Topics/Agent-Deck-Plans/
+docs/plans/
+docs/superpowers/
+.superpowers/

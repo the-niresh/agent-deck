@@ -1,21 +1,21 @@
 {
-  "name": "Vibe Kanban",
-  "short_name": "VK",
+  "name": "Agent Deck",
+  "short_name": "Agent Deck",
   "icons": [
     {
-      "src": "/favicon-vk-light.svg",
+      "src": "/agent-deck-icon-light.svg",
       "sizes": "any",
       "purpose": "any",
       "type": "image/svg+xml"
     },
     {
-      "src": "/favicon-vk-light-maskable.svg",
+      "src": "/agent-deck-icon-maskable.svg",
       "sizes": "any",
       "purpose": "maskable",
       "type": "image/svg+xml"
     },
     {
-      "src": "/apple-touch-icon.png",
+      "src": "/agent-deck-apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
     }

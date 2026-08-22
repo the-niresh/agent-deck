@@ -87,7 +87,7 @@
           "host": {
             "label": "Hôte SSH distant (optionnel)",
             "placeholder": "ex: nom d'hôte ou adresse IP",
-            "helper": "Définissez ceci si Vibe Kanban fonctionne sur un serveur distant. Lorsque défini, cliquer sur \"Ouvrir dans l'éditeur\" générera une URL pour ouvrir votre éditeur via SSH au lieu de lancer une commande locale."
+            "helper": "Définissez ceci si Agent Deck fonctionne sur un serveur distant. Lorsque défini, cliquer sur \"Ouvrir dans l'éditeur\" générera une URL pour ouvrir votre éditeur via SSH au lieu de lancer une commande locale."
           },
           "user": {
             "label": "Utilisateur SSH distant (optionnel)",
@@ -97,7 +97,7 @@
         },
         "autoInstallExtension": {
           "label": "Auto-install VS Code Extension",
-          "helper": "Automatically install the Vibe Kanban extension when opening a project in VS Code or Cursor. This runs in the background and has no effect if the extension is already installed."
+          "helper": "Automatically install the Agent Deck extension when opening a project in VS Code or Cursor. This runs in the background and has no effect if the extension is already installed."
         },
         "availability": {
           "checking": "Vérification de la disponibilité...",
@@ -144,7 +144,7 @@
         "description": "Configurez les préférences de nommage des branches git",
         "branchPrefix": {
           "label": "Préfixe de branche",
-          "placeholder": "vk",
+          "placeholder": "deck",
           "helper": "Préfixe pour les noms de branches auto-générés. Laissez vide pour aucun préfixe.",
           "preview": "Aperçu :",
           "previewWithPrefix": "{{prefix}}/1a2b-nom-tache",
@@ -161,10 +161,10 @@
         "workspaceDir": {
           "label": "Répertoire des espaces de travail",
           "placeholder": "~/",
-          "helper": "Les espaces de travail seront créés dans un sous-répertoire .vibe-kanban-workspaces à l'intérieur de ce chemin. Laissez vide pour utiliser la valeur par défaut du système. Les modifications nécessitent un redémarrage de l'application.",
+          "helper": "Les espaces de travail seront créés dans un sous-répertoire .agent-deck-workspaces à l'intérieur de ce chemin. Laissez vide pour utiliser la valeur par défaut du système. Les modifications nécessitent un redémarrage de l'application.",
           "browse": "Parcourir",
           "dialogTitle": "Sélectionner le répertoire des espaces de travail",
-          "dialogDescription": "Choisissez un répertoire. Les espaces de travail seront créés dans un sous-répertoire .vibe-kanban-workspaces à l'intérieur."
+          "dialogDescription": "Choisissez un répertoire. Les espaces de travail seront créés dans un sous-répertoire .agent-deck-workspaces à l'intérieur."
         }
       },
       "pullRequests": {
@@ -217,7 +217,7 @@
       },
       "privacy": {
         "title": "Confidentialité",
-        "description": "Aidez à améliorer Vibe-Kanban en partageant des données d'utilisation anonymes.",
+        "description": "Aidez à améliorer Agent Deck en partageant des données d'utilisation anonymes.",
         "telemetry": {
           "label": "Activer la télémétrie",
           "helper": "Active le suivi anonyme des événements d'utilisation pour aider à améliorer l'application. Aucun prompt ou information de projet n'est collecté."
@@ -505,11 +505,11 @@
       },
       "remove": {
         "title": "Retirer le dépôt",
-        "description": "Dissocier ce dépôt de Vibe Kanban. Les fichiers sur le disque ne seront pas supprimés.",
+        "description": "Dissocier ce dépôt de Agent Deck. Les fichiers sur le disque ne seront pas supprimés.",
         "button": "Retirer",
         "confirm": "Retirer le dépôt",
         "dialogTitle": "Retirer « {{name}} » ?",
-        "dialogDescription": "Cela dissociera le dépôt de Vibe Kanban. Vos fichiers sur le disque ne seront pas affectés. Vous pourrez le rajouter ultérieurement.",
+        "dialogDescription": "Cela dissociera le dépôt de Agent Deck. Vos fichiers sur le disque ne seront pas affectés. Vous pourrez le rajouter ultérieurement.",
         "success": "Dépôt retiré avec succès.",
         "error": "Échec du retrait du dépôt."
       },

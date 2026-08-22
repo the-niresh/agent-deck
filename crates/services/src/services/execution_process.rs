@@ -21,6 +21,7 @@ use tokio::{
     sync::RwLock,
     task::JoinHandle,
 };
+use tracing::Instrument;
 use utils::{
     assets::prod_asset_dir_path,
     execution_logs::{
@@ -31,6 +32,8 @@ use utils::{
     msg_store::MsgStore,
 };
 use uuid::Uuid;
+
+use crate::services::run_logging::execution_run_span;
 
 const MAX_HISTORICAL_LOG_LINE_BYTES: usize = 1024 * 1024;
 
@@ -289,12 +292,14 @@ pub fn spawn_stream_raw_logs_to_storage(
     execution_id: Uuid,
     session_id: Uuid,
 ) -> JoinHandle<()> {
+    let run_span = execution_run_span(execution_id);
     tokio::spawn(async move {
         let mut log_writer =
             match ExecutionLogWriter::new_for_execution(session_id, execution_id).await {
                 Ok(w) => w,
                 Err(e) => {
                     tracing::error!(
+                        run_id = %execution_id,
                         "Failed to create log file writer for execution {}: {}",
                         execution_id,
                         e
@@ -322,6 +327,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                                 log_writer.append_jsonl_line(&jsonl_line_with_newline).await
                             {
                                 tracing::error!(
+                                    run_id = %execution_id,
                                     "Failed to append log line for execution {}: {}",
                                     execution_id,
                                     e
@@ -330,6 +336,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                         }
                         Err(e) => {
                             tracing::error!(
+                                run_id = %execution_id,
                                 "Failed to serialize log message for execution {}: {}",
                                 execution_id,
                                 e
@@ -345,6 +352,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                         .await
                         {
                             tracing::error!(
+                                run_id = %execution_id,
                                 "Failed to update agent_session_id {} for execution process {}: {}",
                                 agent_session_id,
                                 execution_id,
@@ -361,6 +369,7 @@ pub fn spawn_stream_raw_logs_to_storage(
                         .await
                         {
                             tracing::error!(
+                                run_id = %execution_id,
                                 "Failed to update agent_message_id {} for execution process {}: {}",
                                 agent_message_id,
                                 execution_id,
@@ -375,7 +384,8 @@ pub fn spawn_stream_raw_logs_to_storage(
                 }
             }
         }
-    })
+    }
+    .instrument(run_span))
 }
 
 async fn open_execution_log_lines(
@@ -405,8 +415,9 @@ async fn open_execution_log_lines(
 
     if cfg!(debug_assertions) {
         // Convenience for local development with a clone of a prod db. Read only access to prod logs.
-        let prod_path =
-            process_log_file_path_in_root(&prod_asset_dir_path(), session_id, execution_id);
+        let prod_asset_dir = prod_asset_dir_path()
+            .with_context(|| "resolve production asset directory for execution logs")?;
+        let prod_path = process_log_file_path_in_root(&prod_asset_dir, session_id, execution_id);
         match File::open(&prod_path).await {
             Ok(file) => return Ok(Some(BufReader::new(file))),
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
@@ -444,7 +455,7 @@ fn stream_log_lines_lossy(
                             }
                             return Some((
                                 Ok(LogMsg::Stderr(format!(
-                                    "[vibe-kanban] Skipped an oversized historical log entry larger than {} bytes.",
+                                    "[agent-deck] Skipped an oversized historical log entry larger than {} bytes.",
                                     MAX_HISTORICAL_LOG_LINE_BYTES
                                 ))),
                                 (reader, bad_lines, oversized_lines),
@@ -555,8 +566,10 @@ async fn read_execution_logs_for_execution(
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             if cfg!(debug_assertions) {
                 // Convenience for local development with a clone of a prod db. Read only access to prod logs.
+                let prod_asset_dir = prod_asset_dir_path()
+                    .with_context(|| "resolve production asset directory for execution logs")?;
                 let prod_path =
-                    process_log_file_path_in_root(&prod_asset_dir_path(), session_id, execution_id);
+                    process_log_file_path_in_root(&prod_asset_dir, session_id, execution_id);
                 match read_execution_log_file(&prod_path).await {
                     Ok(contents) => return Ok(Some(contents)),
                     Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}

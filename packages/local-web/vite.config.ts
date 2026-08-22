@@ -7,6 +7,10 @@ import path from "path";
 import fs from "fs";
 import pkg from "./package.json";
 
+const SENTRY_ORG = 'yeahscene-v9';
+const SENTRY_PROJECT = 'agent-deck-frontend';
+const SENTRY_RELEASE = `agent-deck-frontend@${pkg.version}`;
+
 function createFilteredLogger() {
   const logger = createLogger();
   const originalError = logger.error.bind(logger);
@@ -83,6 +87,7 @@ export default defineConfig({
   publicDir: path.resolve(__dirname, '../public'),
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __SENTRY_RELEASE__: JSON.stringify(SENTRY_RELEASE),
   },
   plugins: [
     tanstackRouter({
@@ -108,7 +113,13 @@ export default defineConfig({
         ],
       },
     }),
-    sentryVitePlugin({ org: 'bloop-ai', project: 'vibe-kanban' }),
+    sentryVitePlugin({
+      org: SENTRY_ORG,
+      project: SENTRY_PROJECT,
+      release: {
+        name: SENTRY_RELEASE,
+      },
+    }),
     executorSchemasPlugin(),
   ],
   resolve: {
@@ -147,5 +158,5 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['wa-sqlite'],
   },
-  build: { sourcemap: true },
+  build: { sourcemap: 'hidden' },
 });

@@ -23,7 +23,7 @@ import { IssueWorkspacesSectionContainer } from './IssueWorkspacesSectionContain
 import {
   KanbanIssuePanel,
   type IssueFormData,
-} from '@vibe/ui/components/KanbanIssuePanel';
+} from '@agent-deck/ui/components/KanbanIssuePanel';
 import { useActions } from '@/shared/hooks/useActions';
 import { useUserContext } from '@/shared/hooks/useUserContext';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
@@ -52,7 +52,7 @@ import {
   removeAttachmentMarkdownBySource,
   replaceAttachmentSource,
 } from '@/shared/lib/attachmentUtils';
-import { ConfirmDialog } from '@vibe/ui/components/ConfirmDialog';
+import { ConfirmDialog } from '@agent-deck/ui/components/ConfirmDialog';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useCurrentKanbanRouteState } from '@/shared/hooks/useCurrentKanbanRouteState';
 import {

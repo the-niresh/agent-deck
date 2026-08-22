@@ -24,8 +24,8 @@ pub async fn write_port_file_with_proxy_and_backend_url(
     preview_proxy_port: Option<u16>,
     backend_url: Option<String>,
 ) -> std::io::Result<PathBuf> {
-    let dir = env::temp_dir().join("vibe-kanban");
-    let path = dir.join("vibe-kanban.port");
+    let dir = env::temp_dir().join("agent-deck");
+    let path = dir.join("agent-deck.port");
     let port_info = PortInfo {
         main_port,
         preview_proxy_port,

@@ -29,14 +29,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@vibe/ui/components/Dropdown';
+} from '@agent-deck/ui/components/Dropdown';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@vibe/ui/components/Popover';
-import { PrimaryButton } from '@vibe/ui/components/PrimaryButton';
-import { Switch } from '@vibe/ui/components/Switch';
+} from '@agent-deck/ui/components/Popover';
+import { PrimaryButton } from '@agent-deck/ui/components/PrimaryButton';
+import { Switch } from '@agent-deck/ui/components/Switch';
 import { useUserOrganizations } from '@/shared/hooks/useUserOrganizations';
 import { useAuth } from '@/shared/hooks/auth/useAuth';
 import { OAuthDialog } from '@/shared/dialogs/global/OAuthDialog';
@@ -54,7 +54,7 @@ import {
   type Project,
 } from 'shared/remote-types';
 import { getRandomPresetColor, PRESET_COLORS } from '@/shared/lib/colors';
-import { InlineColorPicker } from '@vibe/ui/components/ColorPicker';
+import { InlineColorPicker } from '@agent-deck/ui/components/ColorPicker';
 import { cn } from '@/shared/lib/utils';
 import {
   SettingsCard,

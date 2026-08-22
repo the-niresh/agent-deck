@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Label } from '@vibe/ui/components/Label';
+import { Label } from '@agent-deck/ui/components/Label';
 import BranchSelector from './BranchSelector';
 import type { RepoBranchConfig } from '@/shared/hooks/useRepoBranchSelection';
 

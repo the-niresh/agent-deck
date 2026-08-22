@@ -88,7 +88,7 @@ pub(crate) async fn migrate(pool: &PgPool) -> Result<(), MigrateError> {
 pub async fn create_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
     let options: PgConnectOptions = database_url
         .parse::<PgConnectOptions>()?
-        .application_name("vibe-kanban-remote");
+        .application_name("agent-deck-remote");
 
     PgPoolOptions::new()
         .max_connections(10)

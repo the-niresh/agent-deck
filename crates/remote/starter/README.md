@@ -1,6 +1,6 @@
 # crates/remote/starter
 
-Opinionated one-command bootstrap for running a local self-hosted Vibe Kanban
+Opinionated one-command bootstrap for running a local self-hosted Agent Deck
 remote (Postgres + Electric + remote-server) on top of
 `crates/remote/docker-compose.yml`, with a frontend app pointed at it.
 
@@ -36,7 +36,7 @@ When it's up you'll have:
 - **Frontend app** at `http://localhost:13333` (configurable), running in the
   foreground. Ctrl+C exits the app; docker stays up. `make stop` to take the
   backend down.
-- **Postgres + Electric** data bind-mounted to `~/vibe-kanban-data` (or
+- **Postgres + Electric** data bind-mounted to `~/agent-deck-data` (or
   wherever you pointed `SELFHOST_DATA_DIR`).
 
 ## Defaults
@@ -50,7 +50,7 @@ defaults to ports outside those ranges:
 | Backend host port | `13000` |
 | Frontend host port | `13333` |
 | Postgres host port | `15433` |
-| Data dir | `$HOME/vibe-kanban-data` |
+| Data dir | `$HOME/agent-deck-data` |
 | Admin email | `admin@local` |
 | Admin password | randomly generated, in `.env.remote` |
 
@@ -106,7 +106,7 @@ succeeds. Wait ~30s or `make logs` and watch.
 
 **Frontend app shows the hosted-cloud data instead of local.** Sign out of the
 old cloud account first, quit the app. `make start` always launches with
-`VK_SHARED_API_BASE` pointed at your local backend.
+`AGENT_DECK_SHARED_API_BASE` pointed at your local backend.
 
 **Want a fresh start.** `make clean` tears everything down (asks first), then
 `make start` re-provisions from scratch.

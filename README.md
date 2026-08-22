@@ -1,9 +1,9 @@
 <p align="center">
   <a href="https://github.com/the-niresh/agent-deck">
     <picture>
-      <source srcset="packages/public/vibe-kanban-logo-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/public/vibe-kanban-logo.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/public/vibe-kanban-logo.svg" alt="Vibe Kanban Logo">
+      <source srcset="packages/public/agent-deck-logo-dark.svg" media="(prefers-color-scheme: dark)">
+      <source srcset="packages/public/agent-deck-logo.svg" media="(prefers-color-scheme: light)">
+      <img src="packages/public/agent-deck-logo.svg" alt="Agent Deck Logo">
     </picture>
   </a>
 </p>
@@ -28,7 +28,7 @@
 >
 > See [Self-hosting](#self-hosting) below to bring up the full stack.
 
-![](packages/public/vibe-kanban-screenshot-overview.png)
+![](packages/public/agent-deck-screenshot-overview.png)
 
 ## Overview
 
@@ -43,14 +43,7 @@ agent-deck is built for this. Use kanban issues to plan work, either privately o
 - **Switch between 10+ coding agents** — Claude Code, Codex, Gemini CLI, GitHub Copilot, Amp, Cursor, OpenCode, Droid, CCR, and Qwen Code
 - **Create pull requests and merge** — open PRs with AI-generated descriptions, review on GitHub, and merge
 
-![](packages/public/vibe-kanban-screenshot-workspace.png)
-
-One command. Describe the work, review the diff, ship it.
-
-```bash
-npx vibe-kanban
-```
-
+![](packages/public/agent-deck-screenshot-workspace.png)
 
 ## Installation
 
@@ -77,7 +70,7 @@ pnpm run dev          # frontend + backend, ports auto-assigned
 - **Desktop app is optional.** `crates/tauri-app` needs GTK system libraries. To build
   and test only the web stack, exclude it:
   ```bash
-  cargo test --workspace --exclude vibe-kanban-tauri
+  cargo test --workspace --exclude agent-deck-tauri
   ```
 
 ## Architecture: two halves, different requirements
@@ -179,30 +172,33 @@ The following environment variables can be configured at build time or runtime:
 | `MCP_HOST` | Runtime | Value of `HOST` | MCP server connection host (use `127.0.0.1` when `HOST=0.0.0.0` on Windows) |
 | `MCP_PORT` | Runtime | Value of `BACKEND_PORT` | MCP server connection port |
 | `DISABLE_WORKTREE_CLEANUP` | Runtime | Not set | Disable all git worktree cleanup including orphan and expired workspace cleanup (for debugging) |
-| `VK_ALLOWED_ORIGINS` | Runtime | Not set | Comma-separated list of origins that are allowed to make backend API requests (e.g., `https://my-vibekanban-frontend.com`) |
-| `VK_SHARED_API_BASE` | Runtime | Not set | Base URL for the remote/cloud API used by the local desktop app |
-| `VK_SHARED_RELAY_API_BASE` | Runtime | Not set | Base URL for the relay API used by tunnel-mode connections |
+| `AGENT_DECK_ALLOWED_ORIGINS` | Runtime | Not set | Comma-separated list of origins that are allowed to make backend API requests (e.g., `https://my-agent-deck-frontend.com`) |
+| `AGENT_DECK_SHARED_API_BASE` | Runtime | Not set | Base URL for the remote/cloud API used by the local desktop app |
+| `AGENT_DECK_SHARED_RELAY_API_BASE` | Runtime | Not set | Base URL for the relay API used by tunnel-mode connections |
+| `AGENT_DECK_REVIEW_API_URL` | Runtime | Not set | API base URL for the `review` command |
+| `AGENT_DECK_GIT_FALLBACK_NAME` | Runtime | `Agent Deck` | Commit author name used when a repository has no Git identity configured |
+| `AGENT_DECK_GIT_FALLBACK_EMAIL` | Runtime | `89511644+the-niresh@users.noreply.github.com` | Commit author email used when a repository has no Git identity configured |
 | `VK_TUNNEL` | Runtime | Not set | Enable relay tunnel mode when set (requires relay API base URL) |
 
 **Build-time variables** must be set when running `pnpm run build`. **Runtime variables** are read when the application starts.
 
 #### Self-Hosting with a Reverse Proxy or Custom Domain
 
-When running Vibe Kanban behind a reverse proxy (e.g., nginx, Caddy, Traefik) or on a custom domain, you must set the `VK_ALLOWED_ORIGINS` environment variable. Without this, the browser's Origin header won't match the backend's expected host, and API requests will be rejected with a 403 Forbidden error.
+When running Agent Deck behind a reverse proxy (e.g., nginx, Caddy, Traefik) or on a custom domain, you must set the `AGENT_DECK_ALLOWED_ORIGINS` environment variable. Without this, the browser's Origin header won't match the backend's expected host, and API requests will be rejected with a 403 Forbidden error.
 
 Set it to the full origin URL(s) where your frontend is accessible:
 
 ```bash
 # Single origin
-VK_ALLOWED_ORIGINS=https://vk.example.com
+AGENT_DECK_ALLOWED_ORIGINS=https://vk.example.com
 
 # Multiple origins (comma-separated)
-VK_ALLOWED_ORIGINS=https://vk.example.com,https://vk-staging.example.com
+AGENT_DECK_ALLOWED_ORIGINS=https://vk.example.com,https://vk-staging.example.com
 ```
 
 ### Remote Deployment
 
-When running Vibe Kanban on a remote server (e.g., via systemctl, Docker, or cloud hosting), you can configure your editor to open projects via SSH:
+When running Agent Deck on a remote server (e.g., via systemctl, Docker, or cloud hosting), you can configure your editor to open projects via SSH:
 
 1. **Access via tunnel**: Use Cloudflare Tunnel, ngrok, or similar to expose the web UI
 2. **Configure remote SSH** in Settings → Editor Integration:

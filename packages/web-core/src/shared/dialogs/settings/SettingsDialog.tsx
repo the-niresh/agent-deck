@@ -25,7 +25,7 @@ import {
   useSettingsHost,
 } from './settings/SettingsHostContext';
 import { SettingsMachineUserSystemProvider } from './settings/SettingsMachineUserSystemProvider';
-import { ConfirmDialog } from '@vibe/ui/components/ConfirmDialog';
+import { ConfirmDialog } from '@agent-deck/ui/components/ConfirmDialog';
 
 export interface SettingsDialogProps {
   initialSection?: SettingsSectionType;

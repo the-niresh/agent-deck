@@ -21,10 +21,12 @@ import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
 import { useAuth } from '@/shared/hooks/auth/useAuth';
 import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 import { useCurrentKanbanRouteState } from '@/shared/hooks/useCurrentKanbanRouteState';
+import { SyncDegradedIndicator } from '@/shared/components/SyncDegradedIndicator';
 import {
   buildKanbanIssueComposerKey,
   closeKanbanIssueComposer,
 } from '@/shared/stores/useKanbanIssueComposerStore';
+
 /**
  * Component that registers project mutations with ActionsContext.
  * Must be rendered inside both ActionsProvider and ProjectProvider.
@@ -95,6 +97,7 @@ function ProjectMutationsRegistration({ children }: { children: ReactNode }) {
 function ProjectKanbanBoard() {
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
+      <SyncDegradedIndicator />
       <div className="min-h-0 flex-1">
         <KanbanContainer />
       </div>

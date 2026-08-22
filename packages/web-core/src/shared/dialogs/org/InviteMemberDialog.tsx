@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Button } from '@vibe/ui/components/Button';
-import { Input } from '@vibe/ui/components/Input';
-import { Label } from '@vibe/ui/components/Label';
+import { Button } from '@agent-deck/ui/components/Button';
+import { Input } from '@agent-deck/ui/components/Input';
+import { Label } from '@agent-deck/ui/components/Label';
 import {
   Dialog,
   DialogContent,
@@ -9,15 +9,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@vibe/ui/components/KeyboardDialog';
+} from '@agent-deck/ui/components/KeyboardDialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@vibe/ui/components/Select';
-import { Alert, AlertDescription } from '@vibe/ui/components/Alert';
+} from '@agent-deck/ui/components/Select';
+import { Alert, AlertDescription } from '@agent-deck/ui/components/Alert';
 import { create, useModal } from '@ebay/nice-modal-react';
 import { useOrganizationMutations } from '@/shared/hooks/useOrganizationMutations';
 import { MemberRole } from 'shared/types';

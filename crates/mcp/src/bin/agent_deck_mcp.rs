@@ -29,9 +29,9 @@ fn main() -> anyhow::Result<()> {
         .unwrap()
         .block_on(async move {
             let version = env!("CARGO_PKG_VERSION");
-            init_process_logging("vibe-kanban-mcp", version);
+            init_process_logging("agent-deck-mcp", version);
 
-            let base_url = resolve_base_url("vibe-kanban-mcp").await?;
+            let base_url = resolve_base_url("agent-deck-mcp").await?;
             let LaunchConfig { mode } = launch_config;
 
             let server = match mode {
@@ -67,12 +67,12 @@ where
                 })?);
             }
             "-h" | "--help" => {
-                println!("Usage: vibe-kanban-mcp --mode <global|orchestrator>");
+                println!("Usage: agent-deck-mcp --mode <global|orchestrator>");
                 std::process::exit(0);
             }
             _ => {
                 return Err(anyhow::anyhow!(
-                    "Unknown argument '{arg}'. Usage: vibe-kanban-mcp --mode <global|orchestrator>"
+                    "Unknown argument '{arg}'. Usage: agent-deck-mcp --mode <global|orchestrator>"
                 ));
             }
         }
@@ -138,7 +138,7 @@ async fn resolve_base_url(log_prefix: &str) -> anyhow::Result<String> {
 
     let port_info = match explicit_port {
         Some(_) => None,
-        None => Some(read_port_info("vibe-kanban").await?),
+        None => Some(read_port_info("agent-deck").await?),
     };
 
     // An authoritative URL is one the operator or the server itself stated
@@ -271,7 +271,7 @@ fn init_process_logging(log_prefix: &str, version: &str) {
         .init();
 
     tracing::debug!(
-        "[{}] Starting Vibe Kanban MCP server version {}...",
+        "[{}] Starting Agent Deck MCP server version {}...",
         log_prefix,
         version
     );

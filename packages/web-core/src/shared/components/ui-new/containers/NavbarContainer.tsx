@@ -11,7 +11,7 @@ import {
   type NavbarSectionItem,
   type NavbarBreadcrumbItem,
   type MobileTabId,
-} from '@vibe/ui/components/Navbar';
+} from '@agent-deck/ui/components/Navbar';
 import { useAllOrganizationProjects } from '@/shared/hooks/useAllOrganizationProjects';
 import { useShape } from '@/shared/integrations/electric/hooks';
 import { PROJECT_ISSUES_SHAPE } from 'shared/remote-types';

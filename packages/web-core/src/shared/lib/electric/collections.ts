@@ -4,7 +4,11 @@ import { createCollection } from '@tanstack/react-db';
 import { getAuthRuntime } from '@/shared/lib/auth/runtime';
 import { getRemoteApiUrl, makeRequest } from '@/shared/lib/remoteApi';
 import type { MutationDefinition, ShapeDefinition } from 'shared/remote-types';
-import type { CollectionConfig, SyncError } from '@/shared/lib/electric/types';
+import type {
+  CollectionConfig,
+  SyncError,
+  SyncSourceStatus,
+} from '@/shared/lib/electric/types';
 
 type ElectricRow = Record<string, unknown> & { [key: string]: unknown };
 
@@ -15,6 +19,10 @@ type SourceRuntime = {
   fallbackLocked: boolean;
   refreshers: Set<() => Promise<void>>;
   fallbackSwitchers: Set<() => void>;
+  recoveryStarters: Set<() => void>;
+  statusListeners: Set<(status: SyncSourceStatus) => void>;
+  recoveryTimer: ReturnType<typeof globalThis.setTimeout> | null;
+  retryAttempt: number;
 };
 
 type MutationFnParams = {
@@ -71,6 +79,8 @@ type SyncConfigLike = {
 const DEFAULT_GC_TIME_MS = 5 * 60 * 1000;
 const ELECTRIC_READY_TIMEOUT_MS = 3000;
 const FALLBACK_REFRESH_INTERVAL_MS = 30 * 1000;
+const ELECTRIC_RECOVERY_INITIAL_DELAY_MS = 1000;
+const ELECTRIC_RECOVERY_MAX_DELAY_MS = 30 * 1000;
 
 const collectionCache = new Map<string, ReturnType<typeof createCollection>>();
 const sourceRuntimes = new Map<string, SourceRuntime>();
@@ -192,22 +202,96 @@ function getOrCreateSourceRuntime(sourceKey: string): SourceRuntime {
     fallbackLocked: false,
     refreshers: new Set(),
     fallbackSwitchers: new Set(),
+    recoveryStarters: new Set(),
+    statusListeners: new Set(),
+    recoveryTimer: null,
+    retryAttempt: 0,
   };
   sourceRuntimes.set(sourceKey, created);
   return created;
 }
 
+function getSourceStatus(runtime: SourceRuntime): SyncSourceStatus {
+  return {
+    mode: runtime.mode,
+    isDegraded: runtime.fallbackLocked,
+    retryAttempt: runtime.retryAttempt,
+  };
+}
+
+function notifySourceStatus(runtime: SourceRuntime): void {
+  const status = getSourceStatus(runtime);
+  for (const listener of runtime.statusListeners) {
+    listener(status);
+  }
+}
+
+function clearSourceRecoveryTimer(runtime: SourceRuntime): void {
+  if (runtime.recoveryTimer) {
+    globalThis.clearTimeout(runtime.recoveryTimer);
+    runtime.recoveryTimer = null;
+  }
+}
+
+function scheduleSourceRecovery(sourceKey: string): void {
+  const runtime = getOrCreateSourceRuntime(sourceKey);
+  if (
+    !runtime.fallbackLocked ||
+    runtime.recoveryTimer ||
+    runtime.recoveryStarters.size === 0
+  ) {
+    return;
+  }
+
+  const delay = Math.min(
+    ELECTRIC_RECOVERY_INITIAL_DELAY_MS * Math.pow(2, runtime.retryAttempt),
+    ELECTRIC_RECOVERY_MAX_DELAY_MS
+  );
+
+  runtime.recoveryTimer = globalThis.setTimeout(() => {
+    runtime.recoveryTimer = null;
+    if (!runtime.fallbackLocked || runtime.recoveryStarters.size === 0) {
+      return;
+    }
+
+    runtime.retryAttempt += 1;
+    notifySourceStatus(runtime);
+
+    for (const starter of Array.from(runtime.recoveryStarters)) {
+      starter();
+    }
+  }, delay);
+}
+
 function lockSourceToFallback(sourceKey: string): void {
   const runtime = getOrCreateSourceRuntime(sourceKey);
-  if (runtime.fallbackLocked) return;
+  const wasFallbackLocked = runtime.fallbackLocked;
 
   runtime.fallbackLocked = true;
   runtime.mode = 'fallback';
+
+  if (!wasFallbackLocked) {
+    runtime.retryAttempt = 0;
+    notifySourceStatus(runtime);
+  }
 
   const switchers = Array.from(runtime.fallbackSwitchers);
   for (const switcher of switchers) {
     switcher();
   }
+
+  scheduleSourceRecovery(sourceKey);
+}
+
+function unlockSourceFallback(sourceKey: string): void {
+  const runtime = getOrCreateSourceRuntime(sourceKey);
+  if (!runtime.fallbackLocked) return;
+
+  runtime.fallbackLocked = false;
+  runtime.mode = 'electric';
+  runtime.retryAttempt = 0;
+  clearSourceRecoveryTimer(runtime);
+  notifySourceStatus(runtime);
 }
 
 function registerFallbackSwitcher(
@@ -223,6 +307,41 @@ function registerFallbackSwitcher(
 
   return () => {
     runtime.fallbackSwitchers.delete(switcher);
+  };
+}
+
+function registerRecoveryStarter(
+  sourceKey: string,
+  starter: () => void
+): () => void {
+  const runtime = getOrCreateSourceRuntime(sourceKey);
+  runtime.recoveryStarters.add(starter);
+  scheduleSourceRecovery(sourceKey);
+
+  return () => {
+    runtime.recoveryStarters.delete(starter);
+    if (runtime.recoveryStarters.size === 0) {
+      clearSourceRecoveryTimer(runtime);
+    }
+  };
+}
+
+/**
+ * Subscribe to a shape source's transport status.
+ * This is for UI state only. Collection data and callers without a listener
+ * keep their existing behavior.
+ */
+export function subscribeToShapeSourceStatus(
+  shape: Pick<ShapeDefinition<unknown>, 'table'>,
+  params: Record<string, string>,
+  listener: (status: SyncSourceStatus) => void
+): () => void {
+  const runtime = getOrCreateSourceRuntime(buildSourceKey(shape.table, params));
+  runtime.statusListeners.add(listener);
+  listener(getSourceStatus(runtime));
+
+  return () => {
+    runtime.statusListeners.delete(listener);
   };
 }
 
@@ -296,6 +415,7 @@ function createErrorReporter(
 function createErrorHandlingFetch(args: {
   onError: (error: SyncError) => void;
   onElectricUnavailable: () => void;
+  onElectricAvailable: () => void;
   isPaused: () => boolean;
 }) {
   return async (
@@ -310,7 +430,11 @@ function createErrorHandlingFetch(args: {
     }
 
     try {
-      return await fetch(input, init);
+      const response = await fetch(input, init);
+      if (response.ok) {
+        args.onElectricAvailable();
+      }
+      return response;
     } catch (error) {
       if (isTransientElectricFailure(error)) {
         throw error;
@@ -329,6 +453,7 @@ function createElectricShapeOptions(args: {
   params: Record<string, string>;
   reportError: (error: SyncError) => void;
   onElectricUnavailable: () => void;
+  onElectricAvailable: () => void;
 }) {
   const authRuntime = getAuthRuntime();
   let isPaused = false;
@@ -363,6 +488,7 @@ function createElectricShapeOptions(args: {
     fetchClient: createErrorHandlingFetch({
       onError: args.reportError,
       onElectricUnavailable: args.onElectricUnavailable,
+      onElectricAvailable: args.onElectricAvailable,
       isPaused: () => isPaused,
     }),
     onError: (error: { status?: number; message?: string; name?: string }) => {
@@ -444,7 +570,6 @@ function createFallbackSync(args: {
   return (syncParams: SyncParams): SyncResult => {
     const runtime = getOrCreateSourceRuntime(args.sourceKey);
     runtime.mode = 'fallback';
-    runtime.fallbackLocked = true;
 
     let isCleanedUp = false;
     let refreshPromise: Promise<void> | null = null;
@@ -537,17 +662,14 @@ function createHybridSync(args: {
 
   return (syncParams: SyncParams): SyncResult => {
     const runtime = getOrCreateSourceRuntime(args.sourceKey);
-    if (runtime.fallbackLocked) {
-      return fallbackSync(syncParams);
-    }
-
-    runtime.mode = 'electric';
 
     let isCleanedUp = false;
-    let usingFallback = false;
+    let usingFallback = runtime.fallbackLocked;
     let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
 
-    let activeSync = normalizeSyncResult(args.electricSync(syncParams));
+    let activeSync = usingFallback
+      ? normalizeSyncResult(fallbackSync(syncParams))
+      : normalizeSyncResult(args.electricSync(syncParams));
 
     const switchToFallback = () => {
       if (isCleanedUp || usingFallback) return;
@@ -557,9 +679,22 @@ function createHybridSync(args: {
       activeSync = normalizeSyncResult(fallbackSync(syncParams));
     };
 
+    const startElectricRecovery = () => {
+      if (isCleanedUp || !usingFallback) return;
+
+      activeSync.cleanup?.();
+      usingFallback = false;
+      activeSync = normalizeSyncResult(args.electricSync(syncParams));
+      scheduleReadyTimeout();
+    };
+
     const unregisterSwitcher = registerFallbackSwitcher(
       args.sourceKey,
       switchToFallback
+    );
+    const unregisterRecoveryStarter = registerRecoveryStarter(
+      args.sourceKey,
+      startElectricRecovery
     );
 
     const scheduleReadyTimeout = () => {
@@ -597,6 +732,7 @@ function createHybridSync(args: {
           globalThis.clearTimeout(timeoutId);
         }
         unregisterSwitcher();
+        unregisterRecoveryStarter();
         activeSync.cleanup?.();
       },
       loadSubset: (options: unknown) =>
@@ -777,12 +913,14 @@ export function createShapeCollection<TRow extends ElectricRow>(
 
   const reportError = createErrorReporter(config);
   const onElectricUnavailable = () => lockSourceToFallback(sourceKey);
+  const onElectricAvailable = () => unlockSourceFallback(sourceKey);
 
   const shapeOptions = createElectricShapeOptions({
     shape,
     params,
     reportError,
     onElectricUnavailable,
+    onElectricAvailable,
   });
 
   const mutationHandlers = mutation

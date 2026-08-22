@@ -758,7 +758,7 @@ impl GitCli {
     /// Rebase `from_branch` onto `base_branch`, then fast-forward `base_branch`
     /// to the rebased tip.
     ///
-    /// In vibe-kanban's worktree-based model, `from_branch` is already checked
+    /// In agent-deck's worktree-based model, `from_branch` is already checked
     /// out in the task worktree (`task_repo_path`) and `base_branch` is checked
     /// out in the base worktree (`base_repo_path`). Because git refuses to
     /// check out a branch that is already used by another worktree, we run the

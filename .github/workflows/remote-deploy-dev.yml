@@ -21,7 +21,7 @@ jobs:
         with:
           token: ${{ secrets.REMOTE_DEPLOYMENT_TOKEN }}
           repository: BloopAI/vibe-kanban-remote-deployment
-          event-type: vibe-kanban-remote-deploy-dev
+          event-type: agent-deck-remote-deploy-dev
           client-payload: |
             {
               "ref": "${{ github.ref_name }}",

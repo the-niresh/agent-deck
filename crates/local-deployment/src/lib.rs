@@ -168,12 +168,12 @@ impl Deployment for LocalDeployment {
         let profile_cache = Arc::new(RwLock::new(None));
         let auth_context = AuthContext::new(oauth_credentials.clone(), profile_cache.clone());
 
-        let api_base = std::env::var("VK_SHARED_API_BASE")
+        let api_base = std::env::var("AGENT_DECK_SHARED_API_BASE")
             .ok()
-            .or_else(|| option_env!("VK_SHARED_API_BASE").map(|s| s.to_string()));
-        let relay_api_base = std::env::var("VK_SHARED_RELAY_API_BASE")
+            .or_else(|| option_env!("AGENT_DECK_SHARED_API_BASE").map(|s| s.to_string()));
+        let relay_api_base = std::env::var("AGENT_DECK_SHARED_RELAY_API_BASE")
             .ok()
-            .or_else(|| option_env!("VK_SHARED_RELAY_API_BASE").map(|s| s.to_string()));
+            .or_else(|| option_env!("AGENT_DECK_SHARED_RELAY_API_BASE").map(|s| s.to_string()));
         let remote_info = RemoteInfo::new();
         if let Some(api_base) = api_base.clone() {
             remote_info
@@ -198,7 +198,7 @@ impl Deployment for LocalDeployment {
                 }
             },
             None => {
-                tracing::info!("VK_SHARED_API_BASE not set; remote features disabled");
+                tracing::info!("AGENT_DECK_SHARED_API_BASE not set; remote features disabled");
                 Err(RemoteClientNotConfigured)
             }
         };

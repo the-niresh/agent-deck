@@ -8,13 +8,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@vibe/ui/components/KeyboardDialog';
-import { Alert, AlertDescription } from '@vibe/ui/components/Alert';
-import { Button } from '@vibe/ui/components/Button';
-import { Checkbox } from '@vibe/ui/components/Checkbox';
+} from '@agent-deck/ui/components/KeyboardDialog';
+import { Alert, AlertDescription } from '@agent-deck/ui/components/Alert';
+import { Button } from '@agent-deck/ui/components/Button';
+import { Checkbox } from '@agent-deck/ui/components/Checkbox';
 import { MessageSquare, AlertCircle, Loader2 } from 'lucide-react';
 import { usePrComments } from '@/shared/hooks/usePrComments';
-import { PrCommentCard } from '@vibe/ui/components/pr-comment-card';
+import { PrCommentCard } from '@agent-deck/ui/components/pr-comment-card';
 import type { UnifiedPrComment } from 'shared/types';
 
 export interface PrCommentsDialogProps {

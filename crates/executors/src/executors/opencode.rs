@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tokio::{io::AsyncBufReadExt, process::Command};
 use ts_rs::TS;
+use uuid::Uuid;
 use workspace_utils::{command_ext::GroupSpawnNoWindowExt, msg_store::MsgStore};
 
 use crate::{
@@ -72,14 +73,16 @@ struct OpencodeServer {
     child: Option<AsyncGroupChild>,
     base_url: String,
     server_password: ServerPassword,
+    run_id: Uuid,
 }
 
 impl Drop for OpencodeServer {
     fn drop(&mut self) {
         // kill the process properly using the kill helper as the native kill_on_drop doesn't work reliably causing orphaned processes and memory leaks
         if let Some(mut child) = self.child.take() {
+            let run_id = self.run_id;
             tokio::spawn(async move {
-                let _ = workspace_utils::process::kill_process_group(&mut child).await;
+                let _ = workspace_utils::process::kill_process_group(&mut child, run_id).await;
             });
         }
     }
@@ -152,6 +155,7 @@ impl Opencode {
             child: Some(child),
             base_url,
             server_password,
+            run_id: env.run_id,
         })
     }
 
@@ -600,7 +604,7 @@ impl StandardCodingAgentExecutor for Opencode {
             let discovery_path = target_path.as_deref().unwrap_or(Path::new(".")).to_path_buf();
             let mut final_options = default_discovered_options();
 
-            let env = ExecutionEnv::new(RepoContext::default(), false, String::new());
+            let env = ExecutionEnv::new(Uuid::new_v4(), RepoContext::default(), false, String::new());
             let env = setup_permissions_env(this.auto_approve, &env);
 
             let server = match this.spawn_server(&discovery_path, &env).await {

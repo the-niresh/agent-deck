@@ -16,8 +16,11 @@ import { cn } from '@/shared/lib/utils';
 import { isTauriMac } from '@/shared/lib/platform';
 
 import { NavbarContainer } from './NavbarContainer';
-import { AppBar, type AppBarHostStatus } from '@vibe/ui/components/AppBar';
-import { MobileDrawer } from '@vibe/ui/components/MobileDrawer';
+import {
+  AppBar,
+  type AppBarHostStatus,
+} from '@agent-deck/ui/components/AppBar';
+import { MobileDrawer } from '@agent-deck/ui/components/MobileDrawer';
 import { AppBarUserPopoverContainer } from './AppBarUserPopoverContainer';
 import { useUserOrganizations } from '@/shared/hooks/useUserOrganizations';
 import { useOrganizationStore } from '@/shared/stores/useOrganizationStore';
@@ -49,7 +52,7 @@ import {
 } from 'shared/remote-types';
 import { AppBarNotificationBellContainer } from '@/pages/workspaces/AppBarNotificationBellContainer';
 import { WorkspacesSidebarContainer } from '@/pages/workspaces/WorkspacesSidebarContainer';
-import { WorkspacesSidebarReopenTag } from '@vibe/ui/components/WorkspacesSidebar';
+import { WorkspacesSidebarReopenTag } from '@agent-deck/ui/components/WorkspacesSidebar';
 import { useRemoteCloudHostsAppBarModel } from '@/shared/hooks/useRemoteCloudHosts';
 
 export function SharedAppLayout() {

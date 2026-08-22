@@ -1,12 +1,12 @@
-import { Badge } from '@vibe/ui/components/Badge';
-import { Button } from '@vibe/ui/components/Button';
+import { Badge } from '@agent-deck/ui/components/Badge';
+import { Button } from '@agent-deck/ui/components/Button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@vibe/ui/components/Select';
+} from '@agent-deck/ui/components/Select';
 import { Trash2 } from 'lucide-react';
 import type { OrganizationMemberWithProfile, MemberRole } from 'shared/types';
 import { MemberRole as MemberRoleEnum } from 'shared/types';

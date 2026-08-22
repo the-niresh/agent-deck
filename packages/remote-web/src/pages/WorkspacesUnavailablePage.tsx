@@ -63,8 +63,7 @@ export default function WorkspacesUnavailablePage({
 
             <ol className="list-inside list-decimal space-y-half text-sm text-low">
               <li>
-                On that machine, open Vibe Kanban and confirm the host is
-                online.
+                On that machine, open Agent Deck and confirm the host is online.
               </li>
               <li>
                 If it still fails, open Relay Settings and pair this host again.

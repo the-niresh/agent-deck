@@ -12,7 +12,9 @@ export function getAgentName(
   if (!agent) return 'Agent';
   switch (agent) {
     case BaseCodingAgent.CLAUDE_CODE:
-      return 'Claude Code';
+      // Partner branding: Anthropic's Agent SDK guidelines allow "Claude" or
+      // "Claude Agent" but not "Claude Code" as a product-surface label.
+      return 'Claude';
     case BaseCodingAgent.AMP:
       return 'AMP';
     case BaseCodingAgent.GEMINI:

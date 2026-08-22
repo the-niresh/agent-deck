@@ -5,14 +5,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@vibe/ui/components/KeyboardDialog';
-import { Button } from '@vibe/ui/components/Button';
+} from '@agent-deck/ui/components/KeyboardDialog';
+import { Button } from '@agent-deck/ui/components/Button';
 import { create, useModal } from '@ebay/nice-modal-react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { defineModal } from '@/shared/lib/modals';
 import { useForcePush } from '@/shared/hooks/useForcePush';
 import { useState } from 'react';
-import { Alert, AlertDescription } from '@vibe/ui/components/Alert';
+import { Alert, AlertDescription } from '@agent-deck/ui/components/Alert';
 import { useTranslation } from 'react-i18next';
 
 export interface ForcePushDialogProps {

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useActions } from '@/shared/hooks/useActions';
 import { Actions } from '@/shared/actions';
-import { BulkActionBar } from '@vibe/ui/components/BulkActionBar';
+import { BulkActionBar } from '@agent-deck/ui/components/BulkActionBar';
 import { useIssueSelectionStore } from '@/shared/stores/useIssueSelectionStore';
 
 interface BulkActionBarContainerProps {

@@ -7,8 +7,8 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/root/claude/projects/vibe-kanban
-ExecStart=/root/claude/projects/vibe-kanban/scripts/self-deploy.sh
+WorkingDirectory=/root/claude/projects/agent-deck
+ExecStart=/root/claude/projects/agent-deck/scripts/self-deploy.sh
 
 # A rebuild compiles the Rust remote server; give it room rather than killing
 # a half-finished image.

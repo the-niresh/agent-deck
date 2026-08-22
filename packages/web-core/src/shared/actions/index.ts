@@ -63,13 +63,13 @@ import { workspaceRecordKeys } from '@/shared/hooks/useWorkspaceRecord';
 import { workspaceRepoKeys } from '@/shared/hooks/useWorkspaceRepo';
 import { repoBranchKeys } from '@/shared/hooks/useRepoBranches';
 import { workspaceSummaryKeys } from '@/shared/hooks/workspaceSummaryKeys';
-import { ConfirmDialog } from '@vibe/ui/components/ConfirmDialog';
-import { ChangeTargetDialog } from '@vibe/ui/components/ChangeTargetDialog';
-import { DeleteWorkspaceDialog } from '@vibe/ui/components/DeleteWorkspaceDialog';
+import { ConfirmDialog } from '@agent-deck/ui/components/ConfirmDialog';
+import { ChangeTargetDialog } from '@agent-deck/ui/components/ChangeTargetDialog';
+import { DeleteWorkspaceDialog } from '@agent-deck/ui/components/DeleteWorkspaceDialog';
 import { RebaseDialog } from '@/shared/dialogs/command-bar/RebaseDialog';
 import { ResolveConflictsDialog } from '@/shared/dialogs/tasks/ResolveConflictsDialog';
-import { RenameWorkspaceDialog } from '@vibe/ui/components/RenameWorkspaceDialog';
-import { ProjectsGuideDialog } from '@vibe/ui/components/ProjectsGuideDialog';
+import { RenameWorkspaceDialog } from '@agent-deck/ui/components/RenameWorkspaceDialog';
+import { ProjectsGuideDialog } from '@agent-deck/ui/components/ProjectsGuideDialog';
 import { CreatePRDialog } from '@/shared/dialogs/command-bar/CreatePRDialog';
 import { getIdeName } from '@/shared/lib/ideName';
 import { EditorSelectionDialog } from '@/shared/dialogs/command-bar/EditorSelectionDialog';
@@ -972,7 +972,7 @@ export const Actions = {
       const repos = await workspacesApi.getRepos(workspaceId);
       const repo = repos.find((r) => r.id === repoId);
 
-      // Resolve vibe-kanban identifier from remote workspace + issue
+      // Resolve agent-deck identifier from remote workspace + issue
       let issueIdentifier: string | undefined;
       const remoteWs = ctx.remoteWorkspaces.find(
         (w) => w.local_workspace_id === workspaceId

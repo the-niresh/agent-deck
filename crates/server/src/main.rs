@@ -1,3 +1,5 @@
+use std::fmt;
+
 use anyhow::{self, Error as AnyhowError};
 use axum::Router;
 use clap::Parser;
@@ -11,7 +13,16 @@ use strip_ansi_escapes::strip;
 use thiserror::Error;
 use tokio_util::sync::CancellationToken;
 use tower_http::validate_request::ValidateRequestHeaderLayer;
-use tracing_subscriber::{EnvFilter, prelude::*};
+use tracing::{Event, Subscriber};
+use tracing_subscriber::{
+    EnvFilter,
+    fmt::{
+        FmtContext, FormatEvent, FormatFields, FormattedFields,
+        format::{JsonFields, Writer},
+    },
+    prelude::*,
+    registry::LookupSpan,
+};
 use utils::{
     assets::asset_dir,
     port_file::write_port_file_with_proxy,
@@ -19,7 +30,7 @@ use utils::{
 };
 
 #[derive(Debug, Error)]
-pub enum VibeKanbanError {
+pub enum AgentDeckError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error(transparent)]
@@ -31,7 +42,7 @@ pub enum VibeKanbanError {
 }
 
 #[derive(Parser, Debug)]
-#[command(name = "vibe-kanban", about = "Run the Vibe Kanban server")]
+#[command(name = "agent-deck", about = "Run the Agent Deck server")]
 struct Cli {
     /// Port to bind the backend server to. Overrides BACKEND_PORT/PORT env vars.
     #[arg(long, value_name = "PORT", value_parser = parse_port)]
@@ -56,7 +67,88 @@ const CLI_ENV_VARS: &[&str] = &[
     "PREVIEW_PROXY_PORT",
 ];
 
-fn main() -> Result<(), VibeKanbanError> {
+/// JSON formatter that promotes the active execution span's run ID to each event.
+///
+/// `tracing_subscriber` normally stores span fields below `span`. Keeping the
+/// run ID at the event root lets operators select a full execution with jq.
+struct RunIdJson;
+
+impl<S, N> FormatEvent<S, N> for RunIdJson
+where
+    S: Subscriber + for<'lookup> LookupSpan<'lookup>,
+    N: for<'writer> FormatFields<'writer> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: Writer<'_>,
+        event: &Event<'_>,
+    ) -> fmt::Result {
+        let serializer = serde_json::value::Serializer;
+        let map =
+            serde::ser::Serializer::serialize_map(serializer, None).map_err(|_| fmt::Error)?;
+        let mut visitor = tracing_serde::SerdeMapVisitor::new(map);
+        event.record(&mut visitor);
+        let event_fields = visitor
+            .take_serializer()
+            .and_then(serde::ser::SerializeMap::end)
+            .map_err(|_| fmt::Error)?;
+
+        let mut record = match event_fields {
+            serde_json::Value::Object(fields) => fields,
+            _ => return Err(fmt::Error),
+        };
+
+        record.insert(
+            "timestamp".to_string(),
+            serde_json::Value::String(
+                chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
+            ),
+        );
+        record.insert(
+            "level".to_string(),
+            serde_json::Value::String(event.metadata().level().to_string()),
+        );
+        record.insert(
+            "target".to_string(),
+            serde_json::Value::String(event.metadata().target().to_string()),
+        );
+
+        let mut current_span = None;
+        if let Some(scope) = ctx.event_scope() {
+            for span in scope.from_root() {
+                let span_fields =
+                    span.extensions()
+                        .get::<FormattedFields<N>>()
+                        .and_then(|fields| {
+                            serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(
+                                fields,
+                            )
+                            .ok()
+                        });
+
+                if let Some(fields) = span_fields {
+                    if !record.contains_key("run_id")
+                        && let Some(run_id) = fields.get("run_id")
+                    {
+                        record.insert("run_id".to_string(), run_id.clone());
+                    }
+                    current_span = Some((span.metadata().name().to_string(), fields));
+                }
+            }
+        }
+
+        if let Some((name, mut fields)) = current_span {
+            fields.insert("name".to_string(), serde_json::Value::String(name));
+            record.insert("span".to_string(), serde_json::Value::Object(fields));
+        }
+
+        let json = serde_json::to_string(&record).map_err(|_| fmt::Error)?;
+        writeln!(writer, "{json}")
+    }
+}
+
+fn main() -> Result<(), AgentDeckError> {
     let cli = Cli::parse();
 
     let port = cli
@@ -101,7 +193,7 @@ fn main() -> Result<(), VibeKanbanError> {
 async fn async_main(
     main_std_listener: std::net::TcpListener,
     proxy_std_listener: std::net::TcpListener,
-) -> Result<(), VibeKanbanError> {
+) -> Result<(), AgentDeckError> {
     // Install rustls crypto provider before any TLS operations
     rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
@@ -116,9 +208,19 @@ async fn async_main(
     );
     let env_filter = EnvFilter::try_new(filter_string).expect("Failed to create tracing filter");
     tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().with_filter(env_filter))
+        .with(
+            tracing_subscriber::fmt::layer()
+                .fmt_fields(JsonFields::new())
+                .event_format(RunIdJson)
+                .with_filter(env_filter),
+        )
         .with(sentry_layer())
         .init();
+    let previous_panic_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic| {
+        tracing::error!(panic = %panic, "Unhandled panic");
+        previous_panic_hook(panic);
+    }));
 
     // Create asset directory if it doesn't exist
     if !asset_dir().exists() {
@@ -288,11 +390,9 @@ pub async fn shutdown_signal() {
 }
 
 pub async fn perform_cleanup_actions(deployment: &DeploymentImpl) {
-    deployment
-        .container()
-        .kill_all_running_processes()
-        .await
-        .expect("Failed to cleanly kill running execution processes");
+    if let Err(error) = deployment.container().kill_all_running_processes().await {
+        tracing::error!(%error, "Failed to cleanly kill running execution processes");
+    }
 }
 
 fn parse_port(value: &str) -> Result<u16, String> {
@@ -311,6 +411,7 @@ fn read_port_from_env(name: &str) -> Option<u16> {
             Ok(port) => Some(port),
             Err(err) => {
                 eprintln!("Ignoring invalid {name} value '{value}': {err}");
+                tracing::warn!("Ignoring invalid {name} value '{value}': {err}");
                 None
             }
         })

@@ -18,7 +18,6 @@ use tempfile::TempDir;
 use tracing::debug;
 use tracing_subscriber::EnvFilter;
 
-const DEFAULT_API_URL: &str = "https://api.vibekanban.com";
 const POLL_INTERVAL: Duration = Duration::from_secs(10);
 const TIMEOUT: Duration = Duration::from_secs(600); // 10 minutes
 
@@ -35,7 +34,7 @@ const BANNER: &str = r#"
 #[derive(Parser, Debug)]
 #[command(name = "review")]
 #[command(
-    about = "Vibe-Kanban Review helps you review GitHub pull requests by turning them into a clear, story-driven summary instead of a wall of diffs. You provide a pull request URL, optionally link a Claude Code project for additional context, and it builds a narrative that highlights key events and important decisions, helping you prioritise what actually needs attention. It's particularly useful when reviewing large amounts of AI-generated code. Note that code is uploaded to and processed on Vibe-Kanban servers using AI."
+    about = "Agent Deck Review helps you review GitHub pull requests by turning them into a clear, story-driven summary instead of a wall of diffs. You provide a pull request URL, optionally link a Claude Code project for additional context, and it builds a narrative that highlights key events and important decisions, helping you prioritise what actually needs attention. It's particularly useful when reviewing large amounts of AI-generated code. Note that code is uploaded to and processed on Agent Deck servers using AI."
 )]
 #[command(version)]
 struct Args {
@@ -46,8 +45,8 @@ struct Args {
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
 
-    /// API base URL
-    #[arg(long, env = "REVIEW_API_URL", default_value = DEFAULT_API_URL)]
+    /// API base URL. Required through --api-url or AGENT_DECK_REVIEW_API_URL.
+    #[arg(long, env = "AGENT_DECK_REVIEW_API_URL")]
     api_url: String,
 }
 

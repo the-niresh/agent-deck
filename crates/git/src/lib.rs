@@ -242,8 +242,9 @@ impl GitService {
         let has_email = cfg.get_string("user.email").is_ok();
         if !(has_name && has_email) {
             let mut cfg = repo.config()?;
-            cfg.set_str("user.name", "Vibe Kanban")?;
-            cfg.set_str("user.email", "noreply@vibekanban.com")?;
+            let (name, email) = fallback_commit_identity();
+            cfg.set_str("user.name", &name)?;
+            cfg.set_str("user.email", &email)?;
         }
         Ok(())
     }
@@ -255,8 +256,10 @@ impl GitService {
     ) -> Result<git2::Signature<'a>, GitServiceError> {
         match repo.signature() {
             Ok(sig) => Ok(sig),
-            Err(_) => git2::Signature::now("Vibe Kanban", "noreply@vibekanban.com")
-                .map_err(GitServiceError::from),
+            Err(_) => {
+                let (name, email) = fallback_commit_identity();
+                git2::Signature::now(&name, &email).map_err(GitServiceError::from)
+            }
         }
     }
 
@@ -1778,6 +1781,21 @@ impl GitService {
     }
 }
 
+fn fallback_commit_identity() -> (String, String) {
+    fallback_commit_identity_from_env(|key| std::env::var(key))
+}
+
+fn fallback_commit_identity_from_env<F>(get_var: F) -> (String, String)
+where
+    F: Fn(&str) -> Result<String, std::env::VarError>,
+{
+    (
+        get_var("AGENT_DECK_GIT_FALLBACK_NAME").unwrap_or_else(|_| "Agent Deck".to_string()),
+        get_var("AGENT_DECK_GIT_FALLBACK_EMAIL")
+            .unwrap_or_else(|_| "89511644+the-niresh@users.noreply.github.com".to_string()),
+    )
+}
+
 /// Compute addition/deletion counts between two text snapshots using libgit2.
 pub fn compute_line_change_counts(old: &str, new: &str) -> (usize, usize) {
     fn ensure_newline(s: &str) -> std::borrow::Cow<'_, str> {
@@ -1804,5 +1822,41 @@ pub fn compute_line_change_counts(old: &str, new: &str) -> (usize, usize) {
             tracing::error!("git2 diff failed: {}", e);
             (0, 0)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashMap, env::VarError};
+
+    use super::fallback_commit_identity_from_env;
+
+    #[test]
+    fn fallback_commit_identity_uses_defaults() {
+        let (name, email) = fallback_commit_identity_from_env(|_| Err(VarError::NotPresent));
+
+        assert_eq!(name, "Agent Deck");
+        assert_eq!(email, "89511644+the-niresh@users.noreply.github.com");
+    }
+
+    #[test]
+    fn fallback_commit_identity_uses_overrides() {
+        let vars = HashMap::from([
+            (
+                "AGENT_DECK_GIT_FALLBACK_NAME",
+                "Custom Agent Deck".to_string(),
+            ),
+            (
+                "AGENT_DECK_GIT_FALLBACK_EMAIL",
+                "agent-deck@example.com".to_string(),
+            ),
+        ]);
+
+        let (name, email) = fallback_commit_identity_from_env(|key| {
+            vars.get(key).cloned().ok_or(VarError::NotPresent)
+        });
+
+        assert_eq!(name, "Custom Agent Deck");
+        assert_eq!(email, "agent-deck@example.com");
     }
 }

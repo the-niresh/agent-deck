@@ -68,14 +68,14 @@ up: _ensure_setup
 	  grep -E '^SELF_HOST_LOCAL_AUTH_(EMAIL|PASSWORD)=' "$(ENV_FILE)" | sed 's/^/  /'
 
 # Runs THIS checkout's client, not the published npm package. The upstream
-# package is pinned at the sunset release, so `npx vibe-kanban@latest` would
+# package is pinned at the sunset release, so `npx agent-deck@latest` would
 # serve the export-only page and none of this fork's changes.
 start: up
 	@. "$(ENV_FILE)" && \
 	  echo "" && \
 	  echo "Launching frontend app at http://localhost:$${FRONTEND_PORT:-13333} (Ctrl+C exits; docker stays up — use 'make stop' after)..." && \
 	  cd "$(VK_REPO_ROOT)" && \
-	  VK_SHARED_API_BASE=http://localhost:$${REMOTE_SERVER_PORT:-13000} \
+	  AGENT_DECK_SHARED_API_BASE=http://localhost:$${REMOTE_SERVER_PORT:-13000} \
 	    FRONTEND_PORT=$${FRONTEND_PORT:-13333} \
 	    pnpm run dev
 

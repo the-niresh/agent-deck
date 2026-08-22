@@ -9,19 +9,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@vibe/ui/components/KeyboardDialog';
-import { Button } from '@vibe/ui/components/Button';
-import { Label } from '@vibe/ui/components/Label';
+} from '@agent-deck/ui/components/KeyboardDialog';
+import { Button } from '@agent-deck/ui/components/Button';
+import { Label } from '@agent-deck/ui/components/Label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@vibe/ui/components/Select';
-import { AutoExpandingTextarea } from '@vibe/ui/components/AutoExpandingTextarea';
+} from '@agent-deck/ui/components/Select';
+import { AutoExpandingTextarea } from '@agent-deck/ui/components/AutoExpandingTextarea';
 import { VirtualizedProcessLogs } from '@/shared/components/VirtualizedProcessLogs';
-import { RunningDots } from '@vibe/ui/components/RunningDots';
+import { RunningDots } from '@agent-deck/ui/components/RunningDots';
 import { defineModal } from '@/shared/lib/modals';
 import { repoApi, workspacesApi } from '@/shared/lib/api';
 import { useLogStream } from '@/shared/hooks/useLogStream';

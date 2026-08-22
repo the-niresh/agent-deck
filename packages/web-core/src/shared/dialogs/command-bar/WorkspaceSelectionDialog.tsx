@@ -5,7 +5,7 @@ import { GitBranchIcon, PlusIcon } from '@phosphor-icons/react';
 import { defineModal } from '@/shared/lib/modals';
 import { ApiError, workspacesApi } from '@/shared/lib/api';
 import { getWorkspaceDefaults } from '@/shared/lib/workspaceDefaults';
-import { ErrorDialog } from '@vibe/ui/components/ErrorDialog';
+import { ErrorDialog } from '@agent-deck/ui/components/ErrorDialog';
 import { useProjectWorkspaceCreateDraft } from '@/shared/hooks/useProjectWorkspaceCreateDraft';
 import {
   buildLinkedIssueCreateState,
@@ -21,7 +21,7 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-} from '@vibe/ui/components/Command';
+} from '@agent-deck/ui/components/Command';
 import { useWorkspaceContext } from '@/shared/hooks/useWorkspaceContext';
 import { ProjectProvider } from '@/shared/providers/remote/ProjectProvider';
 import { useProjectContext } from '@/shared/hooks/useProjectContext';

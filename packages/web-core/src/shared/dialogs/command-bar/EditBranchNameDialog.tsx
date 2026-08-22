@@ -7,9 +7,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@vibe/ui/components/KeyboardDialog';
-import { Button } from '@vibe/ui/components/Button';
-import { Input } from '@vibe/ui/components/Input';
+} from '@agent-deck/ui/components/KeyboardDialog';
+import { Button } from '@agent-deck/ui/components/Button';
+import { Input } from '@agent-deck/ui/components/Input';
 import { create, useModal } from '@ebay/nice-modal-react';
 import { defineModal, getErrorMessage } from '@/shared/lib/modals';
 import { useRenameBranch } from '@/shared/hooks/useRenameBranch';

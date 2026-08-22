@@ -8,9 +8,12 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { siGithub } from "simple-icons";
-import { AppBar, type AppBarHostStatus } from "@vibe/ui/components/AppBar";
+import {
+  AppBar,
+  type AppBarHostStatus,
+} from "@agent-deck/ui/components/AppBar";
 import { XIcon, PlusIcon, HouseIcon, KanbanIcon } from "@phosphor-icons/react";
-import { MobileDrawer } from "@vibe/ui/components/MobileDrawer";
+import { MobileDrawer } from "@agent-deck/ui/components/MobileDrawer";
 import type { Project } from "shared/remote-types";
 import { useIsMobile } from "@/shared/hooks/useIsMobile";
 import { cn } from "@/shared/lib/utils";

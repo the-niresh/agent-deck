@@ -1364,32 +1364,22 @@ impl ClaudeLogProcessor {
                             patches.push(ConversationPatch::replace(info.entry_index, entry));
                         }
                     }
-                    Some(subtype) => {
-                        let entry = NormalizedEntry {
-                            timestamp: None,
-                            entry_type: NormalizedEntryType::SystemMessage,
-                            content: format!("System: {subtype}"),
-                            metadata: Some(
-                                serde_json::to_value(claude_json)
-                                    .unwrap_or(serde_json::Value::Null),
-                            ),
-                        };
-                        let idx = entry_index_provider.next();
-                        patches.push(ConversationPatch::add_normalized_entry(idx, entry));
-                    }
-                    None => {
-                        let entry = NormalizedEntry {
-                            timestamp: None,
-                            entry_type: NormalizedEntryType::SystemMessage,
-                            content: "System message".to_string(),
-                            metadata: Some(
-                                serde_json::to_value(claude_json)
-                                    .unwrap_or(serde_json::Value::Null),
-                            ),
-                        };
-                        let idx = entry_index_provider.next();
-                        patches.push(ConversationPatch::add_normalized_entry(idx, entry));
-                    }
+                    // Unrecognised system subtypes are Claude Code's own lifecycle
+                    // chatter: `hook_started`, `hook_response`, `hook_progress`, and
+                    // whatever a future release adds. Rendering them filled the
+                    // conversation with "System: hook_*" rows that mean nothing to the
+                    // person reading it, and Agent Deck causes them itself by registering
+                    // `hookCallbackIds` for tool approval and the stop git check.
+                    //
+                    // Dropped from the transcript, not from the record: every one is still
+                    // in the raw stdout log, so debugging loses nothing.
+                    //
+                    // Deliberately silent rather than an allow-list of known-noisy
+                    // subtypes. This parser sits on a deploy boundary it does not control,
+                    // so an unrecognised subtype has to be ignored, never surfaced. An
+                    // allow-list would need updating every time Claude Code ships a new
+                    // one, which is how this bug happened.
+                    _ => {}
                 }
             }
             ClaudeJson::Assistant { message, .. } => {
@@ -2804,6 +2794,34 @@ mod tests {
             entries[0].content,
             "System initialized with model: claude-sonnet-4-20250514"
         );
+    }
+
+    #[test]
+    fn test_unknown_system_subtypes_are_not_rendered() {
+        // Claude Code emits hook lifecycle events as `system` messages. Agent Deck asks
+        // for them by registering hookCallbackIds, so they arrive on every run. None of
+        // them belong in the transcript; the raw stdout log keeps them for debugging.
+        for subtype in ["hook_started", "hook_response", "hook_progress"] {
+            let json = format!(r#"{{"type":"system","subtype":"{subtype}"}}"#);
+            let parsed: ClaudeJson = serde_json::from_str(&json).unwrap();
+            assert_eq!(
+                normalize(&parsed, "").len(),
+                0,
+                "system subtype `{subtype}` must not produce a transcript entry"
+            );
+        }
+
+        // A subtype this parser has never seen must be ignored too. It sits on a deploy
+        // boundary it does not control, so a future Claude Code release must not be able
+        // to put noise in the conversation.
+        let json = r#"{"type":"system","subtype":"some_future_subtype_we_do_not_know"}"#;
+        let parsed: ClaudeJson = serde_json::from_str(json).unwrap();
+        assert_eq!(normalize(&parsed, "").len(), 0);
+
+        // A system message with no subtype at all is also silent.
+        let json = r#"{"type":"system"}"#;
+        let parsed: ClaudeJson = serde_json::from_str(json).unwrap();
+        assert_eq!(normalize(&parsed, "").len(), 0);
     }
 
     #[test]

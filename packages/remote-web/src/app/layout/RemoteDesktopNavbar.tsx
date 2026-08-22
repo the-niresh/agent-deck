@@ -5,7 +5,10 @@ import { useActions } from "@/shared/hooks/useActions";
 import { useSyncErrorContext } from "@/shared/hooks/useSyncErrorContext";
 import { useUserOrganizations } from "@/shared/hooks/useUserOrganizations";
 import { useOrganizationStore } from "@/shared/stores/useOrganizationStore";
-import { Navbar, type NavbarSectionItem } from "@vibe/ui/components/Navbar";
+import {
+  Navbar,
+  type NavbarSectionItem,
+} from "@agent-deck/ui/components/Navbar";
 import { NavbarActionGroups } from "@/shared/actions";
 import {
   NavbarDivider,

@@ -38,8 +38,8 @@ pub enum RelayApiError {
     Other(String),
 }
 
-const SPAKE2_CLIENT_ID: &[u8] = b"vibe-kanban-browser";
-const SPAKE2_SERVER_ID: &[u8] = b"vibe-kanban-server";
+const SPAKE2_CLIENT_ID: &[u8] = b"agent-deck-browser";
+const SPAKE2_SERVER_ID: &[u8] = b"agent-deck-server";
 
 #[derive(Clone)]
 pub struct RelayApiClient {
@@ -211,7 +211,7 @@ impl RelayApiClient {
                 &FinishSpake2EnrollmentRequest {
                     enrollment_id: start_response.enrollment_id,
                     client_id,
-                    client_name: format!("Vibe Kanban Relay Pairing ({})", request.host_name),
+                    client_name: format!("Agent Deck Relay Pairing ({})", request.host_name),
                     client_browser: "local-backend".to_string(),
                     client_os: format!("{} {}", os.os_type(), os.version()),
                     client_device: "desktop".to_string(),

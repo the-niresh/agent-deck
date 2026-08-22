@@ -6,7 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import posthog from 'posthog-js';
 import { PostHogProvider } from 'posthog-js/react';
 import App from '@web/app/entry/App';
-import { CrashScreen } from '@vibe/ui/components/CrashScreen';
+import { CrashScreen } from '@agent-deck/ui/components/CrashScreen';
 import '@/i18n';
 import { router } from '@web/app/router';
 import { oauthApi } from '@/shared/lib/api';
@@ -20,6 +20,7 @@ import { initZoom, zoomIn, zoomOut, zoomReset } from '@/shared/lib/zoom';
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
+    release: __SENTRY_RELEASE__,
     tracesSampleRate: 1.0,
     environment: import.meta.env.MODE === 'development' ? 'dev' : 'production',
     integrations: [Sentry.tanstackRouterBrowserTracingIntegration(router)],
@@ -27,12 +28,15 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.setTag('source', 'frontend');
 }
 
-if (
-  import.meta.env.VITE_POSTHOG_API_KEY &&
-  import.meta.env.VITE_POSTHOG_API_ENDPOINT
-) {
-  posthog.init(import.meta.env.VITE_POSTHOG_API_KEY, {
-    api_host: import.meta.env.VITE_POSTHOG_API_ENDPOINT,
+const posthogKey =
+  import.meta.env.VITE_POSTHOG_KEY ?? import.meta.env.VITE_POSTHOG_API_KEY;
+const posthogHost =
+  import.meta.env.VITE_POSTHOG_HOST ??
+  import.meta.env.VITE_POSTHOG_API_ENDPOINT;
+
+if (posthogKey && posthogHost) {
+  posthog.init(posthogKey, {
+    api_host: posthogHost,
     capture_pageview: false,
     capture_pageleave: true,
     capture_performance: true,
@@ -45,7 +49,7 @@ if (
   );
 }
 
-// In the Tauri desktop app, implement custom zoom (Cmd/Ctrl + =/–/0) via root
+// In the Tauri desktop app, implement custom zoom (Cmd/Ctrl + =/-/0) via root
 // font-size scaling and block trackpad/touchpad pinch-to-zoom.
 if (isTauriApp()) {
   initZoom();

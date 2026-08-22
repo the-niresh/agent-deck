@@ -5,7 +5,7 @@ import {
   Navbar,
   type MobileTabId,
   type NavbarSectionItem,
-} from "@vibe/ui/components/Navbar";
+} from "@agent-deck/ui/components/Navbar";
 import { SettingsDialog } from "@/shared/dialogs/settings/SettingsDialog";
 import { CommandBarDialog } from "@/shared/dialogs/command-bar/CommandBarDialog";
 import { useMobileActiveTab } from "@/shared/stores/useUiPreferencesStore";

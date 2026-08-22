@@ -4,12 +4,12 @@ import { useTranslation } from 'react-i18next';
 import type { Project } from 'shared/remote-types';
 import type { OrganizationMemberWithProfile } from 'shared/types';
 import { defineModal } from '@/shared/lib/modals';
-import { CommandDialog } from '@vibe/ui/components/Command';
+import { CommandDialog } from '@agent-deck/ui/components/Command';
 import {
   MultiSelectCommandBar,
   type MultiSelectOption,
-} from '@vibe/ui/components/MultiSelectCommandBar';
-import { UserAvatar } from '@vibe/ui/components/UserAvatar';
+} from '@agent-deck/ui/components/MultiSelectCommandBar';
+import { UserAvatar } from '@agent-deck/ui/components/UserAvatar';
 import { OrgProvider } from '@/shared/providers/remote/OrgProvider';
 import { useOrgContext } from '@/shared/hooks/useOrgContext';
 import { ProjectProvider } from '@/shared/providers/remote/ProjectProvider';

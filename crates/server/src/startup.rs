@@ -195,11 +195,9 @@ pub async fn initialize_deployment(
 
 /// Gracefully shut down running execution processes.
 pub async fn perform_cleanup_actions(deployment: &DeploymentImpl) {
-    deployment
-        .container()
-        .kill_all_running_processes()
-        .await
-        .expect("Failed to cleanly kill running execution processes");
+    if let Err(error) = deployment.container().kill_all_running_processes().await {
+        tracing::error!(%error, "Failed to cleanly kill running execution processes");
+    }
 }
 
 const LEGACY_ATTACHMENT_MIGRATION_MARKER: &str = ".attachment-directories-migrated-v1";
