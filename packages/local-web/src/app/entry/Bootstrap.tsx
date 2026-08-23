@@ -26,7 +26,10 @@ const DEFAULT_TRACES_SAMPLE_RATE = 0.1;
  */
 function parseSampleRate(raw: string | undefined): number {
   const parsed = Number(raw);
-  return raw !== undefined && Number.isFinite(parsed) && parsed >= 0 && parsed <= 1
+  return raw !== undefined &&
+    Number.isFinite(parsed) &&
+    parsed >= 0 &&
+    parsed <= 1
     ? parsed
     : DEFAULT_TRACES_SAMPLE_RATE;
 }
