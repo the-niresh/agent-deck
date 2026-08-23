@@ -150,7 +150,7 @@ impl ExecutorApprovalService for ExecutorApprovalBridge {
         let outcome = self.wait_internal(approval_id, cancel).await?;
 
         match outcome {
-            ApprovalOutcome::Approved => Ok(ApprovalStatus::Approved),
+            ApprovalOutcome::Approved { always } => Ok(ApprovalStatus::Approved { always }),
             ApprovalOutcome::Denied { reason } => Ok(ApprovalStatus::Denied { reason }),
             ApprovalOutcome::TimedOut => Ok(ApprovalStatus::TimedOut),
             ApprovalOutcome::Answered { .. } => Err(ExecutorApprovalError::request_failed(
@@ -169,7 +169,7 @@ impl ExecutorApprovalService for ExecutorApprovalBridge {
         match outcome {
             ApprovalOutcome::Answered { answers } => Ok(QuestionStatus::Answered { answers }),
             ApprovalOutcome::TimedOut => Ok(QuestionStatus::TimedOut),
-            ApprovalOutcome::Approved | ApprovalOutcome::Denied { .. } => {
+            ApprovalOutcome::Approved { .. } | ApprovalOutcome::Denied { .. } => {
                 Err(ExecutorApprovalError::request_failed(
                     "unexpected permission response for question request",
                 ))

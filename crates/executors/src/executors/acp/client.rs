@@ -125,7 +125,7 @@ impl acp::Client for AcpClient {
 
         // Map our ApprovalStatus to ACP outcome
         let outcome = match &status {
-            ApprovalStatus::Approved => {
+            ApprovalStatus::Approved { .. } => {
                 let chosen = args
                     .options
                     .iter()

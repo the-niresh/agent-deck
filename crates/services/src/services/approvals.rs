@@ -131,7 +131,7 @@ impl Approvals {
         is_question: bool,
     ) -> Result<(), ApprovalError> {
         match outcome {
-            ApprovalOutcome::Approved | ApprovalOutcome::Denied { .. } if is_question => {
+            ApprovalOutcome::Approved { .. } | ApprovalOutcome::Denied { .. } if is_question => {
                 Err(ApprovalError::InvalidStatus)
             }
             ApprovalOutcome::Answered { .. } if !is_question => Err(ApprovalError::InvalidStatus),

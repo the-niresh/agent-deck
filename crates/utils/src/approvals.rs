@@ -32,7 +32,16 @@ impl ApprovalRequest {
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum ApprovalStatus {
     Pending,
-    Approved,
+    Approved {
+        /// The user asked not to be prompted for this tool again.
+        ///
+        /// Each executor honours this in its own protocol: Claude echoes back
+        /// the `permission_suggestions` the CLI offered, OpenCode replies
+        /// "always" instead of "once". Executors with no such concept ignore
+        /// it and simply approve once, which is the safe direction.
+        #[serde(default)]
+        always: bool,
+    },
     Denied {
         #[ts(optional)]
         reason: Option<String>,
@@ -59,7 +68,12 @@ pub enum QuestionStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum ApprovalOutcome {
-    Approved,
+    Approved {
+        /// See [`ApprovalStatus::Approved::always`]. Set by the UI's
+        /// "Approve, don't ask again" action.
+        #[serde(default)]
+        always: bool,
+    },
     Denied {
         #[ts(optional)]
         reason: Option<String>,
