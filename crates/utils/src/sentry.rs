@@ -1,7 +1,9 @@
 use std::{
     borrow::Cow,
     collections::BTreeSet,
-    sync::{Arc, OnceLock},
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex, OnceLock},
+    time::SystemTime,
 };
 
 use directories::ProjectDirs;
@@ -117,7 +119,7 @@ where
 }
 
 fn scrub_event(event: Event<'static>) -> Event<'static> {
-    let context = ScrubContext::from_runtime();
+    let context = cached_scrub_context();
     scrub_event_with_context(event, &context)
 }
 
@@ -130,7 +132,140 @@ fn scrub_event_with_context(event: Event<'static>, context: &ScrubContext) -> Ev
     serde_json::from_value(value).unwrap_or(event)
 }
 
-#[derive(Debug, Default)]
+// The scrub context is invoked from Sentry's `before_send`, which fires on
+// every captured event - including during error storms when the process is
+// already unhealthy. The env-var and cwd portion of the context is fixed for
+// the lifetime of the process (the only `set_var` calls we make happen at
+// startup), so we build it once. The `credentials.json` files DO change at
+// runtime (they are written the first time a user authenticates), so we
+// re-read them - but only when the file's mtime or length has actually
+// changed, which we detect with a cheap `metadata` syscall instead of a
+// full `read_to_string`.
+//
+// We deliberately avoid a TTL cache here: any window between a token being
+// written to disk and the cache expiring would let that token be sent to
+// Sentry in plaintext. Comparing fs metadata closes that window entirely
+// AND avoids the disk read on the common (unchanged) path. Do not
+// "simplify" this into a time-based or permanently-cached scheme.
+static CONTEXT_CACHE: OnceLock<Mutex<ContextCache>> = OnceLock::new();
+
+fn cached_scrub_context() -> Arc<ScrubContext> {
+    let cache = CONTEXT_CACHE.get_or_init(|| Mutex::new(ContextCache::from_runtime()));
+    let mut guard = cache.lock().expect("scrub context cache mutex poisoned");
+    guard.refresh();
+    Arc::clone(&guard.full_context)
+}
+
+#[derive(Debug)]
+struct ContextCache {
+    static_context: ScrubContext,
+    credentials_entries: Vec<CredentialsEntry>,
+    full_context: Arc<ScrubContext>,
+}
+
+#[derive(Debug)]
+struct CredentialsEntry {
+    path: PathBuf,
+    fingerprint: Option<FileFingerprint>,
+    sensitive_values: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct FileFingerprint {
+    modified: Option<SystemTime>,
+    len: u64,
+}
+
+impl ContextCache {
+    fn from_runtime() -> Self {
+        Self::new(
+            ScrubContext::from_static_environment(),
+            default_credentials_paths(),
+        )
+    }
+
+    fn new(static_context: ScrubContext, credentials_paths: Vec<PathBuf>) -> Self {
+        let credentials_entries = credentials_paths
+            .into_iter()
+            .map(|path| CredentialsEntry {
+                path,
+                fingerprint: None,
+                sensitive_values: Vec::new(),
+            })
+            .collect();
+
+        let mut cache = Self {
+            static_context,
+            credentials_entries,
+            full_context: Arc::new(ScrubContext::default()),
+        };
+        for entry in &mut cache.credentials_entries {
+            entry.fingerprint = read_file_fingerprint(&entry.path);
+            entry.sensitive_values = load_credentials_sensitive_values(&entry.path);
+        }
+        cache.rebuild_full_context();
+        cache
+    }
+
+    fn refresh(&mut self) {
+        let mut changed = false;
+        for entry in &mut self.credentials_entries {
+            let current = read_file_fingerprint(&entry.path);
+            if current != entry.fingerprint {
+                entry.fingerprint = current;
+                entry.sensitive_values = load_credentials_sensitive_values(&entry.path);
+                changed = true;
+            }
+        }
+        if changed {
+            self.rebuild_full_context();
+        }
+    }
+
+    fn rebuild_full_context(&mut self) {
+        let mut context = self.static_context.clone();
+        for entry in &self.credentials_entries {
+            for value in &entry.sensitive_values {
+                context.sensitive_values.push(value.clone());
+            }
+        }
+        context.deduplicate();
+        self.full_context = Arc::new(context);
+    }
+}
+
+fn default_credentials_paths() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    if let Some(project_dirs) = ProjectDirs::from("ai", "bloop", "agent-deck") {
+        paths.push(project_dirs.data_dir().join("credentials.json"));
+    }
+    if let Some(project_dirs) = ProjectDirs::from("ai", "bloop", "vibe-kanban") {
+        paths.push(project_dirs.data_dir().join("credentials.json"));
+    }
+    paths
+}
+
+fn read_file_fingerprint(path: &Path) -> Option<FileFingerprint> {
+    let metadata = std::fs::metadata(path).ok()?;
+    Some(FileFingerprint {
+        modified: metadata.modified().ok(),
+        len: metadata.len(),
+    })
+}
+
+fn load_credentials_sensitive_values(path: &Path) -> Vec<String> {
+    let Ok(raw) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    let Ok(value) = serde_json::from_str::<Value>(&raw) else {
+        return Vec::new();
+    };
+    let mut helper = ScrubContext::default();
+    helper.add_sensitive_values_from_json(&value);
+    helper.sensitive_values
+}
+
+#[derive(Debug, Default, Clone)]
 struct ScrubContext {
     sensitive_values: Vec<String>,
     repository_paths: Vec<String>,
@@ -138,7 +273,7 @@ struct ScrubContext {
 }
 
 impl ScrubContext {
-    fn from_runtime() -> Self {
+    fn from_static_environment() -> Self {
         let mut context = Self::default();
 
         for (key, value) in std::env::vars() {
@@ -158,18 +293,6 @@ impl ScrubContext {
             context.add_repository_path(current_dir.display().to_string());
         }
 
-        if let Some(project_dirs) = ProjectDirs::from("ai", "bloop", "agent-deck") {
-            context.add_sensitive_values_from_json_file(
-                project_dirs.data_dir().join("credentials.json"),
-            );
-        }
-
-        if let Some(project_dirs) = ProjectDirs::from("ai", "bloop", "vibe-kanban") {
-            context.add_sensitive_values_from_json_file(
-                project_dirs.data_dir().join("credentials.json"),
-            );
-        }
-
         context.deduplicate();
         context
     }
@@ -182,18 +305,6 @@ impl ScrubContext {
         }
         context.deduplicate();
         context
-    }
-
-    fn add_sensitive_values_from_json_file(&mut self, path: impl AsRef<std::path::Path>) {
-        let Ok(raw) = std::fs::read_to_string(path) else {
-            return;
-        };
-
-        let Ok(value) = serde_json::from_str::<Value>(&raw) else {
-            return;
-        };
-
-        self.add_sensitive_values_from_json(&value);
     }
 
     fn add_sensitive_values_from_json(&mut self, value: &Value) {
@@ -331,7 +442,7 @@ mod tests {
     use sentry::protocol::Event;
     use serde_json::{Value, json};
 
-    use super::{ScrubContext, scrub_event_with_context};
+    use super::{ContextCache, ScrubContext, scrub_event_with_context};
 
     #[test]
     fn scrub_event_removes_home_paths_and_tokens() {
@@ -378,6 +489,42 @@ mod tests {
         assert!(
             !json_contains(&scrubbed_json, "customer/main"),
             "branch name should be redacted: {scrubbed_json}"
+        );
+    }
+
+    #[test]
+    fn scrub_picks_up_credentials_written_after_first_scrub() {
+        let dir = tempfile::tempdir().expect("tempdir must be created");
+        let path = dir.path().join("credentials.json");
+
+        // First scrub: credentials file does not exist yet. The token in
+        // the event stays in plaintext because we don't know about it.
+        let mut cache = ContextCache::new(ScrubContext::default(), vec![path.clone()]);
+        let event = Event {
+            message: Some("token: later-written-secret-token-42".into()),
+            ..Default::default()
+        };
+        let scrubbed_before = scrub_event_with_context(event.clone(), &cache.full_context);
+        let json_before = serde_json::to_value(&scrubbed_before).expect("event must serialize");
+        assert!(
+            json_contains(&json_before, "later-written-secret-token-42"),
+            "sanity check: token is present before credentials file is written"
+        );
+
+        // User "authenticates" - credentials file appears with the secret.
+        std::fs::write(&path, r#"{"token": "later-written-secret-token-42"}"#)
+            .expect("credentials file must be written");
+
+        // Next event: the scrubber must notice the file change and redact
+        // the secret. This is the whole point of using an mtime/length
+        // fingerprint rather than a TTL - the redaction window closes the
+        // instant the file is written, not after some expiry.
+        cache.refresh();
+        let scrubbed_after = scrub_event_with_context(event, &cache.full_context);
+        let json_after = serde_json::to_value(&scrubbed_after).expect("event must serialize");
+        assert!(
+            !json_contains(&json_after, "later-written-secret-token-42"),
+            "credential written after first scrub must be redacted next time: {json_after}"
         );
     }
 
