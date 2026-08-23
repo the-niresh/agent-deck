@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::{path::PathBuf, str::FromStr, sync::Arc};
 
 use sqlx::{
     ConnectOptions, Error, Pool, Sqlite, SqlitePool,
@@ -67,6 +67,14 @@ async fn run_migrations(pool: &Pool<Sqlite>) -> Result<(), Error> {
     }
 }
 
+/// `create_pool`'s hook parameter is generic, so `None` needs a concrete type
+/// to infer. This names one for the no-hook callers.
+type NoHook =
+    fn(
+        &mut SqliteConnection,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), Error>> + Send + '_>>;
+const NO_AFTER_CONNECT: Option<Arc<NoHook>> = None;
+
 #[derive(Clone)]
 pub struct DBService {
     pub pool: Pool<Sqlite>,
@@ -111,11 +119,22 @@ impl DBService {
             + Sync
             + 'static,
     {
-        let pool = Self::create_pool(Some(Arc::new(after_connect))).await?;
+        let pool =
+            Self::create_pool(Self::default_db_path(), Some(Arc::new(after_connect))).await?;
         Ok(DBService { pool })
     }
 
-    async fn create_pool<F>(after_connect: Option<Arc<F>>) -> Result<Pool<Sqlite>, Error>
+    /// Open a database at an explicit path instead of the shared `asset_dir()`
+    /// one.
+    ///
+    /// Exists for tests: everything else here writes to the single real
+    /// `db.v2.sqlite`, so a test that exercised an `after_connect` hook had
+    /// nowhere to run without touching the developer's own database. Point this
+    /// at a tempdir and the run is isolated and disposable.
+    pub async fn new_at_path_with_after_connect<F>(
+        db_path: PathBuf,
+        after_connect: F,
+    ) -> Result<DBService, Error>
     where
         F: for<'a> Fn(
                 &'a mut SqliteConnection,
@@ -125,10 +144,39 @@ impl DBService {
             + Sync
             + 'static,
     {
-        let database_url = format!(
-            "sqlite://{}",
-            asset_dir().join("db.v2.sqlite").to_string_lossy()
-        );
+        let pool = Self::create_pool(db_path, Some(Arc::new(after_connect))).await?;
+        Ok(DBService { pool })
+    }
+
+    /// Plain connection to a database at an explicit path, no hook.
+    ///
+    /// Pairs with [`Self::new_at_path_with_after_connect`]: the hook itself
+    /// needs a `DBService` to query through, and it cannot be the hooked one,
+    /// so both open the same file. Production does the same thing with
+    /// `DBService::new()`.
+    pub async fn new_at_path(db_path: PathBuf) -> Result<DBService, Error> {
+        let pool = Self::create_pool(db_path, NO_AFTER_CONNECT).await?;
+        Ok(DBService { pool })
+    }
+
+    fn default_db_path() -> PathBuf {
+        asset_dir().join("db.v2.sqlite")
+    }
+
+    async fn create_pool<F>(
+        db_path: PathBuf,
+        after_connect: Option<Arc<F>>,
+    ) -> Result<Pool<Sqlite>, Error>
+    where
+        F: for<'a> Fn(
+                &'a mut SqliteConnection,
+            ) -> std::pin::Pin<
+                Box<dyn std::future::Future<Output = Result<(), Error>> + Send + 'a>,
+            > + Send
+            + Sync
+            + 'static,
+    {
+        let database_url = format!("sqlite://{}", db_path.to_string_lossy());
         let options = SqliteConnectOptions::from_str(&database_url)?
             .create_if_missing(true)
             .journal_mode(SqliteJournalMode::Delete);
