@@ -1,4 +1,5 @@
 use db::models::{
+    coding_agent_turn::CodingAgentTurn,
     execution_process::{ExecutionProcess, ExecutionProcessStatus},
     session::Session,
 };
@@ -478,13 +479,32 @@ impl McpServer {
             Err(error_result) => return Ok(Self::tool_error(error_result)),
         };
 
+        // Only once the run has actually finished. While it is still running the
+        // turn row already exists but its summary is not the final answer yet,
+        // and returning a partial one as if it were is worse than returning
+        // nothing.
+        let final_message = if is_finished {
+            let turn_url = self.url(&format!("/api/execution-processes/{execution_id}/turn"));
+            match self
+                .send_json::<Option<CodingAgentTurn>>(self.client.get(&turn_url))
+                .await
+            {
+                Ok(turn) => turn.and_then(|turn| turn.summary),
+                // A missing or unreadable turn is not a reason to fail the whole
+                // call - the status is still worth returning.
+                Err(_) => None,
+            }
+        } else {
+            None
+        };
+
         Self::success(&GetExecutionResponse {
             execution_id: execution_process.id.to_string(),
             session_id: execution_process.session_id.to_string(),
             status: Self::execution_process_status_label(&execution_process.status).to_string(),
             is_finished,
             execution: execution_process_value,
-            final_message: None,
+            final_message,
         })
     }
 }

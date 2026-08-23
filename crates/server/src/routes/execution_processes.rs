@@ -7,6 +7,7 @@ use axum::{
     routing::{get, post},
 };
 use db::models::{
+    coding_agent_turn::CodingAgentTurn,
     execution_process::{ExecutionProcess, ExecutionProcessStatus},
     execution_process_repo_state::ExecutionProcessRepoState,
 };
@@ -283,11 +284,28 @@ async fn get_execution_process_repo_states(
     Ok(ResponseJson(ApiResponse::success(repo_states)))
 }
 
+/// The coding agent's turn for this execution, which carries `summary` - the
+/// agent's final message.
+///
+/// Exists so MCP clients can read back what an agent actually said. The MCP
+/// server is an HTTP client to this API and has no database pool, so without an
+/// endpoint its `get_execution` could only ever report that a run finished, not
+/// what it produced.
+async fn get_execution_process_turn(
+    Extension(execution_process): Extension<ExecutionProcess>,
+    State(deployment): State<DeploymentImpl>,
+) -> Result<ResponseJson<ApiResponse<Option<CodingAgentTurn>>>, ApiError> {
+    let pool = &deployment.db().pool;
+    let turn = CodingAgentTurn::find_by_execution_process_id(pool, execution_process.id).await?;
+    Ok(ResponseJson(ApiResponse::success(turn)))
+}
+
 pub(super) fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
     let workspace_id_router = Router::new()
         .route("/", get(get_execution_process_by_id))
         .route("/stop", post(stop_execution_process))
         .route("/repo-states", get(get_execution_process_repo_states))
+        .route("/turn", get(get_execution_process_turn))
         .route("/raw-logs/ws", get(stream_raw_logs_ws))
         .route("/normalized-logs/ws", get(stream_normalized_logs_ws))
         .layer(from_fn_with_state(
