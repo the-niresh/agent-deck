@@ -110,50 +110,75 @@ impl McpServer {
         )])
     }
 
+    /// Turns an HTTP status into something a caller can act on.
+    ///
+    /// A bare "returned error status: 409 Conflict" says nothing about what to
+    /// do next. 409 in particular is usually the benign case where the thing
+    /// you asked for already exists - linking a workspace to an issue it is
+    /// already linked to, say - and should not read like a failure.
+    fn http_status_message(status: reqwest::StatusCode) -> String {
+        match status {
+            reqwest::StatusCode::CONFLICT => {
+                "Already done, or it conflicts with existing state - nothing was changed \
+                 (HTTP 409)"
+                    .to_string()
+            }
+            reqwest::StatusCode::NOT_FOUND => "Not found - check the id (HTTP 404)".to_string(),
+            reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN => {
+                format!("Not permitted (HTTP {})", status.as_u16())
+            }
+            _ => format!("The Agent Deck API returned {status}"),
+        }
+    }
+
     async fn send_json<T: DeserializeOwned>(
         &self,
         rb: reqwest::RequestBuilder,
     ) -> Result<T, ToolError> {
         let resp = rb.send().await.map_err(|error| {
-            ToolError::new("Failed to connect to VK API", Some(error.to_string()))
+            ToolError::new(
+                "Failed to connect to the Agent Deck API",
+                Some(error.to_string()),
+            )
         })?;
 
         if !resp.status().is_success() {
-            let status = resp.status();
-            return Err(ToolError::message(format!(
-                "VK API returned error status: {}",
-                status
-            )));
+            return Err(ToolError::message(Self::http_status_message(resp.status())));
         }
 
         let api_response = resp
             .json::<ApiResponseEnvelope<T>>()
             .await
             .map_err(|error| {
-                ToolError::new("Failed to parse VK API response", Some(error.to_string()))
+                ToolError::new(
+                    "Failed to parse the Agent Deck API response",
+                    Some(error.to_string()),
+                )
             })?;
 
         if !api_response.success {
             let msg = api_response.message.as_deref().unwrap_or("Unknown error");
-            return Err(ToolError::new("VK API returned error", Some(msg)));
+            return Err(ToolError::new(
+                "The Agent Deck API returned an error",
+                Some(msg),
+            ));
         }
 
-        api_response
-            .data
-            .ok_or_else(|| ToolError::message("VK API response missing data field"))
+        api_response.data.ok_or_else(|| {
+            ToolError::message("The Agent Deck API response was missing its data field")
+        })
     }
 
     async fn send_empty_json(&self, rb: reqwest::RequestBuilder) -> Result<(), ToolError> {
         let resp = rb.send().await.map_err(|error| {
-            ToolError::new("Failed to connect to VK API", Some(error.to_string()))
+            ToolError::new(
+                "Failed to connect to the Agent Deck API",
+                Some(error.to_string()),
+            )
         })?;
 
         if !resp.status().is_success() {
-            let status = resp.status();
-            return Err(ToolError::message(format!(
-                "VK API returned error status: {}",
-                status
-            )));
+            return Err(ToolError::message(Self::http_status_message(resp.status())));
         }
 
         #[derive(Deserialize)]
@@ -163,12 +188,18 @@ impl McpServer {
         }
 
         let api_response = resp.json::<EmptyApiResponse>().await.map_err(|error| {
-            ToolError::new("Failed to parse VK API response", Some(error.to_string()))
+            ToolError::new(
+                "Failed to parse the Agent Deck API response",
+                Some(error.to_string()),
+            )
         })?;
 
         if !api_response.success {
             let msg = api_response.message.as_deref().unwrap_or("Unknown error");
-            return Err(ToolError::new("VK API returned error", Some(msg)));
+            return Err(ToolError::new(
+                "The Agent Deck API returned an error",
+                Some(msg),
+            ));
         }
 
         Ok(())
@@ -498,5 +529,32 @@ mod tests {
         let serialized = serde_json::to_value(&context).expect("context should serialize");
 
         assert!(serialized.get("orchestrator_session_id").is_none());
+    }
+
+    /// A bare HTTP status is not actionable, and 409 is usually the benign
+    /// "already done" case rather than a failure. Found during the
+    /// AGENT-DECK-2 probe, where linking an already-linked workspace returned
+    /// `VK API returned error status: 409 Conflict` verbatim to the agent.
+    #[test]
+    fn http_status_messages_are_actionable_and_unbranded() {
+        use reqwest::StatusCode;
+
+        let conflict = McpServer::http_status_message(StatusCode::CONFLICT);
+        assert!(
+            conflict.contains("nothing was changed"),
+            "409 must read as benign, got: {conflict}"
+        );
+
+        for status in [
+            StatusCode::CONFLICT,
+            StatusCode::NOT_FOUND,
+            StatusCode::FORBIDDEN,
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ] {
+            let msg = McpServer::http_status_message(status);
+            // Upstream's product name must never reach a caller.
+            assert!(!msg.contains("VK"), "{status} leaked VK branding: {msg}");
+            assert!(!msg.is_empty());
+        }
     }
 }
