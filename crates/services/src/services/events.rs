@@ -351,3 +351,162 @@ impl EventService {
         &self.msg_store
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use db::models::{
+        execution_process::{CreateExecutionProcess, ExecutionProcessRunReason},
+        session::CreateSession,
+        workspace::CreateWorkspace,
+    };
+    use executors::actions::{
+        ExecutorAction, ExecutorActionType,
+        script::{ScriptContext, ScriptRequest, ScriptRequestLanguage},
+    };
+    use utils::log_msg::LogMsg;
+
+    use super::*;
+
+    /// `8b41cee97` moved four sidebar attention signals off the polled summary
+    /// endpoint onto the live workspace stream, and shipped without a test for
+    /// the thing it exists to do. Nothing asserted that inserting a
+    /// `coding_agent_turns` row causes the owning workspace to be re-emitted.
+    ///
+    /// There is no turn patch stream, so the sidebar only learns about a new
+    /// turn because the update hook re-emits the whole workspace. Delete the
+    /// `CodingAgentTurns` arm from `create_hook` and this test fails.
+    #[tokio::test]
+    async fn inserting_a_turn_re_emits_the_owning_workspace() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db_path = dir.path().join("events-hook-test.sqlite");
+
+        let msg_store = Arc::new(MsgStore::new());
+        let entry_count = Arc::new(RwLock::new(0));
+
+        // The hook queries through its own handle - it cannot be the pool it is
+        // installed on. Production pairs them the same way.
+        let hook_db = DBService::new_at_path(db_path.clone())
+            .await
+            .expect("hook db");
+        let hook = EventService::create_hook(msg_store.clone(), entry_count.clone(), hook_db);
+        let db = DBService::new_at_path_with_after_connect(db_path.clone(), hook)
+            .await
+            .expect("hooked db");
+
+        let workspace = Workspace::create(
+            &db.pool,
+            &CreateWorkspace {
+                branch: "main".to_string(),
+                name: Some("hook-test".to_string()),
+            },
+            Uuid::new_v4(),
+        )
+        .await
+        .expect("workspace");
+
+        let session = Session::create(
+            &db.pool,
+            &CreateSession {
+                executor: None,
+                name: None,
+            },
+            Uuid::new_v4(),
+            workspace.id,
+        )
+        .await
+        .expect("session");
+
+        let execution_process = ExecutionProcess::create(
+            &db.pool,
+            &CreateExecutionProcess {
+                session_id: session.id,
+                executor_action: ExecutorAction::new(
+                    ExecutorActionType::ScriptRequest(ScriptRequest {
+                        script: "true".to_string(),
+                        language: ScriptRequestLanguage::Bash,
+                        context: ScriptContext::SetupScript,
+                        working_dir: None,
+                    }),
+                    None,
+                ),
+                run_reason: ExecutionProcessRunReason::SetupScript,
+            },
+            Uuid::new_v4(),
+            &[],
+        )
+        .await
+        .expect("execution process");
+
+        // ⚠️ Everything above also fires the hook, and the hook spawns onto the
+        // runtime - so those patches land *after* the seeding calls return.
+        // Snapshotting the history immediately here counts them as belonging to
+        // the turn insert, and the test then passes with the hook removed.
+        // Wait for the store to go quiet first.
+        settle(&msg_store).await;
+        let before = msg_store.get_history().len();
+
+        sqlx::query("INSERT INTO coding_agent_turns (id, execution_process_id) VALUES ($1, $2)")
+            .bind(Uuid::new_v4())
+            .bind(execution_process.id)
+            .execute(&db.pool)
+            .await
+            .expect("insert turn");
+
+        // The hook spawns onto the runtime, so the patch lands after the insert
+        // returns. Poll to a hard deadline rather than sleeping a guessed
+        // interval, and say so loudly on timeout.
+        // Assert on `has_unseen_turns: true`, not merely on the workspace id.
+        // The id alone appears in patches from the seeding writes too; this
+        // flag can only be true once the turn row exists, so it is specific to
+        // the path under test.
+        let workspace_id = workspace.id.to_string();
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let mut saw_unseen_turns_patch = false;
+
+        while Instant::now() < deadline {
+            saw_unseen_turns_patch = msg_store
+                .get_history()
+                .into_iter()
+                .skip(before)
+                .filter_map(|msg| match msg {
+                    LogMsg::JsonPatch(patch) => serde_json::to_string(&patch).ok(),
+                    _ => None,
+                })
+                .any(|json| {
+                    json.contains(&workspace_id) && json.contains("\"has_unseen_turns\":true")
+                });
+
+            if saw_unseen_turns_patch {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+
+        assert!(
+            saw_unseen_turns_patch,
+            "inserting a coding_agent_turn did not re-emit workspace {workspace_id} with \
+             has_unseen_turns=true within 10s - the sidebar attention signals are driven by \
+             this patch and nothing else"
+        );
+    }
+
+    /// Waits for the msg store to stop growing, so patches from earlier writes
+    /// are not mistaken for ones caused by the write under test.
+    async fn settle(msg_store: &Arc<MsgStore>) {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let mut last = usize::MAX;
+
+        while Instant::now() < deadline {
+            let current = msg_store.get_history().len();
+            if current == last {
+                return;
+            }
+            last = current;
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+
+        panic!("msg store never went quiet within 10s - seeding patches are still arriving");
+    }
+}
