@@ -586,6 +586,7 @@ impl StandardCodingAgentExecutor for ClaudeCode {
         ExecutorConfig {
             executor: BaseCodingAgent::ClaudeCode,
             variant: None,
+            role_id: None,
             model_id: self.model.clone().or_else(|| {
                 default_discovered_options()
                     .model_selector

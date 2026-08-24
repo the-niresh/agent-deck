@@ -35,6 +35,10 @@ struct StartWorkspaceRequest {
     #[schemars(description = "Optional executor variant, if needed")]
     variant: Option<String>,
     #[schemars(
+        description = "Optional role to run under, by name (e.g. 'cloud-engineer'). Resolved from .agent-deck/roles/<name>.md in the repo. Forwarded to ExecutorConfig.role_id."
+    )]
+    role_id: Option<String>,
+    #[schemars(
         description = "Optional model override (e.g. 'anthropic/claude-sonnet-4-20250514'). Forwarded to ExecutorConfig.model_id."
     )]
     model_id: Option<String>,
@@ -120,6 +124,7 @@ impl McpServer {
             prompt,
             executor,
             variant,
+            role_id,
             model_id,
             agent_id,
             reasoning_id,
@@ -203,6 +208,7 @@ impl McpServer {
             executor_config: ExecutorConfig {
                 executor: base_executor,
                 variant,
+                role_id: role_id.and_then(trim_to_option),
                 model_id: model_id.and_then(trim_to_option),
                 agent_id: agent_id.and_then(trim_to_option),
                 reasoning_id: reasoning_id.and_then(trim_to_option),

@@ -220,6 +220,7 @@ impl StandardCodingAgentExecutor for Droid {
         ExecutorConfig {
             executor: BaseCodingAgent::Droid,
             variant: None,
+            role_id: None,
             model_id: self.model.clone(),
             agent_id: None,
             reasoning_id: self

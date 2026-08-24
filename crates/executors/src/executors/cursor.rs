@@ -647,6 +647,7 @@ impl StandardCodingAgentExecutor for CursorAgent {
         ExecutorConfig {
             executor: BaseCodingAgent::CursorAgent,
             variant: None,
+            role_id: None,
             model_id: self.model.clone(),
             agent_id: None,
             reasoning_id: self.reasoning.clone(),
