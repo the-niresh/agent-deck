@@ -185,6 +185,7 @@ impl StandardCodingAgentExecutor for Gemini {
         ExecutorConfig {
             executor: BaseCodingAgent::Gemini,
             variant: None,
+            role_id: None,
             model_id: self.model.clone(),
             agent_id: None,
             reasoning_id: None,

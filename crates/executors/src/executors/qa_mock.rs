@@ -113,6 +113,7 @@ impl StandardCodingAgentExecutor for QaMockExecutor {
         ExecutorConfig {
             executor: BaseCodingAgent::QaMock,
             variant: None,
+            role_id: None,
             model_id: Some("qa-mock".to_string()),
             agent_id: None,
             reasoning_id: None,

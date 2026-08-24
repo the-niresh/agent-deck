@@ -577,6 +577,11 @@ executor: BaseCodingAgent,
  */
 variant?: string | null, 
 /**
+ * Role to run under, by name. Resolved from `.agent-deck/roles/<name>.md`
+ * in the worktree. See `crate::role`.
+ */
+role_id?: string | null, 
+/**
  * Model override (e.g., "anthropic/claude-sonnet-4-20250514")
  */
 model_id?: string | null, 

@@ -12,6 +12,7 @@ use crate::{
     env::ExecutionEnv,
     executors::{BaseCodingAgent, ExecutorError, SpawnedChild, StandardCodingAgentExecutor},
     profile::ExecutorConfig,
+    role::Role,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
@@ -70,13 +71,19 @@ impl Executable for CodingAgentFollowUpRequest {
 
         #[cfg(not(feature = "qa-mode"))]
         {
-            let profile_id = self.executor_config.profile_id();
+            // The role's defaults still apply, so model and permission policy stay
+            // consistent across the session. Its instructions do not: the opening
+            // prompt already carried them and the session still holds them.
+            let mut executor_config = self.executor_config.clone();
+            Role::resolve(&effective_dir, &mut executor_config)?;
+
+            let profile_id = executor_config.profile_id();
             let mut agent = ExecutorConfigs::get_cached()
                 .get_coding_agent(&profile_id)
                 .ok_or(ExecutorError::UnknownExecutorType(profile_id.to_string()))?;
 
-            if self.executor_config.has_overrides() {
-                agent.apply_overrides(&self.executor_config);
+            if executor_config.has_overrides() {
+                agent.apply_overrides(&executor_config);
             }
             agent.use_approvals(approvals.clone());
 

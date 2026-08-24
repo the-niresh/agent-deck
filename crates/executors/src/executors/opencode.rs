@@ -761,6 +761,7 @@ impl StandardCodingAgentExecutor for Opencode {
         ExecutorConfig {
             executor: BaseCodingAgent::Opencode,
             variant: None,
+            role_id: None,
             model_id: self.model.clone(),
             agent_id: self.agent.clone(),
             reasoning_id: self.variant.clone(),

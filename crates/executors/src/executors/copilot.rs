@@ -182,6 +182,7 @@ impl StandardCodingAgentExecutor for Copilot {
         ExecutorConfig {
             executor: BaseCodingAgent::Copilot,
             variant: None,
+            role_id: None,
             model_id: self.model.clone(),
             agent_id: None,
             reasoning_id: None,

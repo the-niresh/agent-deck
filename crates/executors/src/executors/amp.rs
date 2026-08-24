@@ -154,6 +154,7 @@ impl StandardCodingAgentExecutor for Amp {
         ExecutorConfig {
             executor: BaseCodingAgent::Amp,
             variant: None,
+            role_id: None,
             model_id: None,
             agent_id: None,
             reasoning_id: None,

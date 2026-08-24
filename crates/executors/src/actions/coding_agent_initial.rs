@@ -12,6 +12,7 @@ use crate::{
     env::ExecutionEnv,
     executors::{BaseCodingAgent, ExecutorError, SpawnedChild, StandardCodingAgentExecutor},
     profile::ExecutorConfig,
+    role::Role,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, TS)]
@@ -59,17 +60,27 @@ impl Executable for CodingAgentInitialRequest {
 
         #[cfg(not(feature = "qa-mode"))]
         {
-            let profile_id = self.executor_config.profile_id();
+            // A role is resolved against the worktree, so it is versioned with the
+            // code it governs. It fills in unset overrides and leads the prompt;
+            // the prompt half is what makes it work on every executor.
+            let mut executor_config = self.executor_config.clone();
+            let role = Role::resolve(&effective_dir, &mut executor_config)?;
+            let prompt = match &role {
+                Some(role) => role.apply_to_prompt(&self.prompt),
+                None => self.prompt.clone(),
+            };
+
+            let profile_id = executor_config.profile_id();
             let mut agent = ExecutorConfigs::get_cached()
                 .get_coding_agent(&profile_id)
                 .ok_or(ExecutorError::UnknownExecutorType(profile_id.to_string()))?;
 
-            if self.executor_config.has_overrides() {
-                agent.apply_overrides(&self.executor_config);
+            if executor_config.has_overrides() {
+                agent.apply_overrides(&executor_config);
             }
             agent.use_approvals(approvals.clone());
 
-            agent.spawn(&effective_dir, &self.prompt, env).await
+            agent.spawn(&effective_dir, &prompt, env).await
         }
     }
 }

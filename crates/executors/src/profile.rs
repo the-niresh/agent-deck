@@ -129,6 +129,10 @@ pub struct ExecutorConfig {
     /// Optional variant/preset name (e.g., "PLAN", "ROUTER")
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub variant: Option<String>,
+    /// Role to run under, by name. Resolved from `.agent-deck/roles/<name>.md`
+    /// in the worktree. See `crate::role`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role_id: Option<String>,
     /// Model override (e.g., "anthropic/claude-sonnet-4-20250514")
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_id: Option<String>,
@@ -149,6 +153,7 @@ impl ExecutorConfig {
         Self {
             executor,
             variant: None,
+            role_id: None,
             model_id: None,
             agent_id: None,
             reasoning_id: None,
@@ -178,6 +183,7 @@ impl From<ExecutorProfileId> for ExecutorConfig {
         Self {
             executor: id.executor,
             variant: id.variant,
+            role_id: None,
             model_id: None,
             agent_id: None,
             reasoning_id: None,

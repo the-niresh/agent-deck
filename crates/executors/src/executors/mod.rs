@@ -89,6 +89,8 @@ pub enum ExecutorError {
     SetupHelperNotSupported,
     #[error("Auth required: {0}")]
     AuthRequired(String),
+    #[error(transparent)]
+    Role(#[from] crate::role::RoleError),
 }
 
 #[enum_dispatch]
