@@ -62,6 +62,7 @@ impl ClaudeAgentClient {
         tool_use_id: String,
         tool_name: String,
         tool_input: serde_json::Value,
+        permission_suggestions: Option<Vec<PermissionUpdate>>,
     ) -> Result<PermissionResult, ExecutorError> {
         let approval_service = self
             .approvals
@@ -107,7 +108,7 @@ impl ClaudeAgentClient {
             .await?;
 
         match status {
-            ApprovalStatus::Approved => {
+            ApprovalStatus::Approved { always } => {
                 if tool_name == EXIT_PLAN_MODE_NAME {
                     Ok(PermissionResult::Allow {
                         updated_input: tool_input,
@@ -121,9 +122,18 @@ impl ClaudeAgentClient {
                         }]),
                     })
                 } else {
+                    // The CLI offers `permission_suggestions` on every
+                    // can_use_tool request - the "always allow this tool here"
+                    // rules it would write if the user chose that. We used to
+                    // drop them, so there was no way to stop being asked and a
+                    // task needing an approval per edit asked for every edit.
+                    //
+                    // Only echo them back when the user actually asked not to
+                    // be prompted again. Sending them on a plain approve would
+                    // silently make every one-off approval permanent.
                     Ok(PermissionResult::Allow {
                         updated_input: tool_input,
-                        updated_permissions: None,
+                        updated_permissions: if always { permission_suggestions } else { None },
                     })
                 }
             }
@@ -280,7 +290,7 @@ impl ClaudeAgentClient {
         &self,
         tool_name: String,
         input: serde_json::Value,
-        _permission_suggestions: Option<Vec<PermissionUpdate>>,
+        permission_suggestions: Option<Vec<PermissionUpdate>>,
         tool_use_id: Option<String>,
     ) -> Result<PermissionResult, ExecutorError> {
         if tool_name == ASK_USER_QUESTION_NAME {
@@ -304,7 +314,7 @@ impl ClaudeAgentClient {
                 updated_permissions: None,
             })
         } else if let Some(latest_tool_use_id) = tool_use_id {
-            self.handle_approval(latest_tool_use_id, tool_name, input)
+            self.handle_approval(latest_tool_use_id, tool_name, input, permission_suggestions)
                 .await
         } else {
             // Auto approve tools with no matching tool_use_id

@@ -78,7 +78,7 @@ impl ExecutorApprovalService for NoopExecutorApprovalService {
         _approval_id: &str,
         _cancel: CancellationToken,
     ) -> Result<ApprovalStatus, ExecutorApprovalError> {
-        Ok(ApprovalStatus::Approved)
+        Ok(ApprovalStatus::Approved { always: false })
     }
 
     async fn wait_question_answer(

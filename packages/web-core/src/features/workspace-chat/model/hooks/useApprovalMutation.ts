@@ -20,7 +20,7 @@ export function useApprovalMutation() {
     mutationFn: ({ approvalId, executionProcessId }: ApproveParams) =>
       approvalsApi.respond(approvalId, {
         execution_process_id: executionProcessId,
-        status: { status: 'approved' },
+        status: { status: 'approved', always: false },
       }),
     onError: (err) => {
       console.error('Failed to approve:', err);

@@ -460,7 +460,7 @@ impl AppServerClient {
         tool_call_id: &str,
     ) -> Result<ApprovalStatus, ExecutorError> {
         if self.auto_approve {
-            return Ok(ApprovalStatus::Approved);
+            return Ok(ApprovalStatus::Approved { always: false });
         }
         let approval_service = self
             .approvals
@@ -616,7 +616,7 @@ impl AppServerClient {
         };
 
         match status {
-            ApprovalStatus::Approved => {
+            ApprovalStatus::Approved { .. } => {
                 self.spawn_turn_start(
                     thread_id,
                     "Implement the plan.".to_string(),
@@ -684,7 +684,7 @@ impl AppServerClient {
         }
 
         match status {
-            ApprovalStatus::Approved => (CommandExecutionApprovalDecision::Accept, None),
+            ApprovalStatus::Approved { .. } => (CommandExecutionApprovalDecision::Accept, None),
             ApprovalStatus::Denied { reason } => {
                 let feedback = reason
                     .as_ref()
@@ -711,7 +711,7 @@ impl AppServerClient {
         }
 
         match status {
-            ApprovalStatus::Approved => (FileChangeApprovalDecision::Accept, None),
+            ApprovalStatus::Approved { .. } => (FileChangeApprovalDecision::Accept, None),
             ApprovalStatus::Denied { reason } => {
                 let feedback = reason
                     .as_ref()

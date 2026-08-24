@@ -295,11 +295,31 @@ export function useConversationVirtualizer({
 
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
+  const prevTotalSizeRef = useRef(totalSize);
 
   useLayoutEffect(() => {
+    // Read both of these BEFORE syncIsAtBottom, which overwrites
+    // lastAtBottomRef with the post-clamp position.
+    const wasAtBottom = lastAtBottomRef.current;
+    const contentShrank = totalSize < prevTotalSizeRef.current;
+    prevTotalSizeRef.current = totalSize;
+
     syncIsAtBottom();
 
-    if (!bottomLockedRef.current) return;
+    // A row that shrinks while the reader sits at the bottom is the approval
+    // case: clicking Approve unmounts the Approve/Stop buttons and the feedback
+    // box, total height drops, and the browser clamps scrollTop to the new
+    // scrollHeight - clientHeight. That clamp is the upward jump.
+    //
+    // Compensating in shouldAdjustScrollPositionOnItemSizeChange instead does
+    // not work: an approval row you just clicked is visible by definition, and
+    // that predicate deliberately only fires for rows fully above the viewport
+    // because widening it caused mid-list flicker. So re-pin against the clamp
+    // rather than widen the predicate.
+    const shouldRepinAfterShrink =
+      !bottomLockedRef.current && contentShrank && wasAtBottom;
+
+    if (!bottomLockedRef.current && !shouldRepinAfterShrink) return;
     if (performance.now() < smoothScrollDeadlineRef.current) return;
 
     const el = scrollContainerRef.current;

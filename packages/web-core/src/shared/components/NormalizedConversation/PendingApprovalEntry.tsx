@@ -16,7 +16,7 @@ import {
   TooltipTrigger,
 } from '@agent-deck/ui/components/RadixTooltip';
 import { approvalsApi } from '@/shared/lib/api';
-import { Check, X } from 'lucide-react';
+import { Check, CheckCheck, X } from 'lucide-react';
 import WYSIWYGEditor from '@/shared/components/WYSIWYGEditor';
 
 import { useHotkeysContext } from 'react-hotkeys-hook';
@@ -80,11 +80,13 @@ function ActionButtons({
   disabled,
   isResponding,
   onApprove,
+  onApproveAlways,
   onStartDeny,
 }: {
   disabled: boolean;
   isResponding: boolean;
   onApprove: () => void;
+  onApproveAlways: () => void;
   onStartDeny: () => void;
 }) {
   return (
@@ -104,6 +106,26 @@ function ActionButtons({
         </TooltipTrigger>
         <TooltipContent>
           <p>{isResponding ? 'Submitting…' : 'Approve request'}</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            onClick={onApproveAlways}
+            variant="ghost"
+            className="h-8 w-8 rounded-full p-0"
+            disabled={disabled}
+            aria-label={
+              isResponding ? 'Submitting approval' : "Approve, don't ask again"
+            }
+            aria-busy={isResponding}
+          >
+            <CheckCheck className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{isResponding ? 'Submitting…' : "Approve, don't ask again"}</p>
         </TooltipContent>
       </Tooltip>
 
@@ -243,7 +265,7 @@ const PendingApprovalEntry = ({
   ]);
 
   const respond = useCallback(
-    async (approved: boolean, reason?: string) => {
+    async (approved: boolean, reason?: string, always = false) => {
       if (disabled) return;
       if (!executionProcessId) {
         setError('Missing executionProcessId');
@@ -254,7 +276,7 @@ const PendingApprovalEntry = ({
       setError(null);
 
       const status: ApprovalStatus = approved
-        ? { status: 'approved' }
+        ? { status: 'approved', always }
         : { status: 'denied', reason };
 
       try {
@@ -277,6 +299,13 @@ const PendingApprovalEntry = ({
   );
 
   const handleApprove = useCallback(() => respond(true), [respond]);
+  // Sends the CLI's own permission_suggestions back, so it records the rule and
+  // stops asking for this tool. Without it every edit in a task needs its own
+  // approval click.
+  const handleApproveAlways = useCallback(
+    () => respond(true, undefined, true),
+    [respond]
+  );
   const handleStartDeny = useCallback(() => {
     if (disabled) return;
     setError(null);
@@ -335,6 +364,7 @@ const PendingApprovalEntry = ({
                   disabled={disabled}
                   isResponding={isResponding}
                   onApprove={handleApprove}
+                  onApproveAlways={handleApproveAlways}
                   onStartDeny={handleStartDeny}
                 />
               )}

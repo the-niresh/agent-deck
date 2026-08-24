@@ -195,13 +195,27 @@ export type PullRequestInfo = { number: bigint, url: string, status: MergeStatus
 
 export type ApprovalInfo = { approval_id: string, tool_name: string, execution_process_id: string, is_question: boolean, created_at: string, timeout_at: string, };
 
-export type ApprovalStatus = { "status": "pending" } | { "status": "approved" } | { "status": "denied", reason?: string, } | { "status": "timed_out" };
+export type ApprovalStatus = { "status": "pending" } | { "status": "approved", 
+/**
+ * The user asked not to be prompted for this tool again.
+ *
+ * Each executor honours this in its own protocol: Claude echoes back
+ * the `permission_suggestions` the CLI offered, OpenCode replies
+ * "always" instead of "once". Executors with no such concept ignore
+ * it and simply approve once, which is the safe direction.
+ */
+always: boolean, } | { "status": "denied", reason?: string, } | { "status": "timed_out" };
 
 export type QuestionAnswer = { question: string, answer: Array<string>, };
 
 export type QuestionStatus = { "status": "answered", answers: Array<QuestionAnswer>, } | { "status": "timed_out" };
 
-export type ApprovalOutcome = { "status": "approved" } | { "status": "denied", reason?: string, } | { "status": "answered", answers: Array<QuestionAnswer>, } | { "status": "timed_out" };
+export type ApprovalOutcome = { "status": "approved", 
+/**
+ * See [`ApprovalStatus::Approved::always`]. Set by the UI's
+ * "Approve, don't ask again" action.
+ */
+always: boolean, } | { "status": "denied", reason?: string, } | { "status": "answered", answers: Array<QuestionAnswer>, } | { "status": "timed_out" };
 
 export type ApprovalResponse = { execution_process_id: string, status: ApprovalOutcome, };
 

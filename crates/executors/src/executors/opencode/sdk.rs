@@ -1516,7 +1516,7 @@ async fn process_event_stream(
                             log_approval_response(
                                 &log_writer,
                                 &tool_call_id,
-                                ApprovalStatus::Approved,
+                                ApprovalStatus::Approved { always: false },
                             )
                             .await;
 
@@ -1573,7 +1573,7 @@ async fn process_event_stream(
                     log_approval_response(&log_writer, &tool_call_id, status.clone()).await;
 
                     let (reply, message) = match status {
-                        ApprovalStatus::Approved => ("once", None),
+                        ApprovalStatus::Approved { always } => (if always { "always" } else { "once" }, None),
                         ApprovalStatus::Denied { reason } => {
                             let msg = reason
                                 .unwrap_or_else(|| "User denied this tool use request".to_string())
@@ -1735,7 +1735,7 @@ async fn wait_permission_approval(
     cancel: CancellationToken,
 ) -> Result<ApprovalStatus, ExecutorApprovalError> {
     let Some(approvals) = approvals else {
-        return Ok(ApprovalStatus::Approved);
+        return Ok(ApprovalStatus::Approved { always: false });
     };
 
     approvals.wait_tool_approval(approval_id, cancel).await

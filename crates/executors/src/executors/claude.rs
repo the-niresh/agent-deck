@@ -1866,7 +1866,7 @@ impl ClaudeLogProcessor {
                 }
 
                 let entry_opt = match approval_status {
-                    ApprovalStatus::Pending | ApprovalStatus::Approved => None,
+                    ApprovalStatus::Pending | ApprovalStatus::Approved { .. } => None,
                     ApprovalStatus::Denied { reason } => Some(NormalizedEntry {
                         timestamp: None,
                         entry_type: NormalizedEntryType::UserFeedback {
@@ -3304,5 +3304,70 @@ mod tests {
         let control_request_json = r#"{"type":"control_request","request_id":"f559d907-b139-475b-addd-79c05591eb99","request":{"subtype":"can_use_tool","tool_name":"Bash","input":{"command":"./gradlew :web:testApi","timeout":300000,"description":"Run API tests"},"permission_suggestions":[{"type":"addRules","rules":[{"toolName":"Bash","ruleContent":"./gradlew :web:testApi:"}],"behavior":"allow","destination":"localSettings"}],"tool_use_id":"toolu_014PR3WXsJfiftSCbjcjEbeM"}}"#;
         let parsed: ClaudeJson = serde_json::from_str(control_request_json).unwrap();
         assert!(matches!(parsed, ClaudeJson::ControlRequest { .. }));
+    }
+
+    /// The suggestions the CLI sends were parsed and then dropped, so there was
+    /// no way to stop being asked. They now ride back out on `updatedPermissions`
+    /// when the user picks "Approve, don't ask again" - but only then, or every
+    /// one-off approval would silently become permanent.
+    #[test]
+    fn approved_always_returns_the_cli_permission_suggestions() {
+        use crate::executors::claude::types::{
+            PermissionResult, PermissionRuleValue, PermissionUpdate, PermissionUpdateDestination,
+            PermissionUpdateType,
+        };
+
+        let suggestions = vec![PermissionUpdate {
+            update_type: PermissionUpdateType::AddRules,
+            mode: None,
+            destination: Some(PermissionUpdateDestination::LocalSettings),
+            rules: Some(vec![PermissionRuleValue {
+                tool_name: "Bash".to_string(),
+                rule_content: Some("./gradlew :web:testApi:".to_string()),
+            }]),
+            behavior: Some("allow".to_string()),
+            directories: None,
+        }];
+
+        let allow_always = PermissionResult::Allow {
+            updated_input: serde_json::json!({"command": "./gradlew :web:testApi"}),
+            updated_permissions: Some(suggestions),
+        };
+        let json = serde_json::to_value(&allow_always).unwrap();
+        // The CLI reads this exact key; a rename silently stops the rule
+        // being recorded and the prompting quietly comes back.
+        assert_eq!(json["behavior"], "allow");
+        assert_eq!(json["updatedPermissions"][0]["type"], "addRules");
+        assert_eq!(
+            json["updatedPermissions"][0]["rules"][0]["toolName"],
+            "Bash"
+        );
+
+        let allow_once = PermissionResult::Allow {
+            updated_input: serde_json::json!({}),
+            updated_permissions: None,
+        };
+        let json_once = serde_json::to_value(&allow_once).unwrap();
+        assert!(
+            json_once.get("updatedPermissions").is_none(),
+            "a plain approve must not carry permission updates: {json_once}"
+        );
+    }
+
+    /// `always` defaults to false, so an older client that omits the field
+    /// approves once rather than granting a standing rule.
+    #[test]
+    fn approval_status_always_defaults_to_false_when_absent() {
+        use workspace_utils::approvals::ApprovalStatus;
+
+        let parsed: ApprovalStatus = serde_json::from_str(r#"{"status":"approved"}"#).unwrap();
+        assert!(matches!(parsed, ApprovalStatus::Approved { always: false }));
+
+        let explicit: ApprovalStatus =
+            serde_json::from_str(r#"{"status":"approved","always":true}"#).unwrap();
+        assert!(matches!(
+            explicit,
+            ApprovalStatus::Approved { always: true }
+        ));
     }
 }
