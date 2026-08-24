@@ -16,6 +16,7 @@ import '@/shared/types/modals';
 import { queryClient } from '@/shared/lib/queryClient';
 import { isTauriApp } from '@/shared/lib/platform';
 import { initZoom, zoomIn, zoomOut, zoomReset } from '@/shared/lib/zoom';
+import { scrubEvent } from '@/shared/lib/sentryScrub';
 
 const DEFAULT_TRACES_SAMPLE_RATE = 0.1;
 
@@ -45,6 +46,10 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     ),
     environment: import.meta.env.MODE === 'development' ? 'dev' : 'production',
     integrations: [Sentry.tanstackRouterBrowserTracingIntegration(router)],
+    // The Rust side strips home paths from every event it sends. Without this
+    // the browser half sent them unredacted to the same Sentry project, and the
+    // UI has worktree paths on screen constantly.
+    beforeSend: scrubEvent,
   });
   Sentry.setTag('source', 'frontend');
 }
